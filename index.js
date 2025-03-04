@@ -74,6 +74,14 @@ function heartbeat() {
 
 client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
+  // ბიოს დამატება
+    try {
+        await client.user.edit({ about: "🔥 This is my bot's bio! Join my Discord server!" });
+        console.log('\x1b[32m[ BIO ]\x1b[0m', 'Profile bio updated successfully!');
+    } catch (error) {
+        console.error('\x1b[31m[ ERROR ]\x1b[
+  
+                      
   updateStatus();
   setInterval(updateStatus, 10000);
   heartbeat();
