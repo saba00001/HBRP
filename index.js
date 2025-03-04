@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 
 const client = new Client({
   intents: [
@@ -25,6 +26,7 @@ app.listen(port, () => {
 
 // Configuration
 const OWNER_IDS = ['1326983284168720505']; // Replace with your Discord user ID
+const STATUS_FILE = 'status.json'; // ფაილში სტატუსის შესანახად
 const DEFAULT_STATUS = {
   message: "Horizon Beyond Server",
   type: "WATCHING"
@@ -48,6 +50,19 @@ const ACTIVITY_TYPES = {
 // Persistent status storage
 let persistentStatus = null;
 
+// Save status to file
+function saveStatusToFile() {
+  fs.writeFileSync(STATUS_FILE, JSON.stringify(persistentStatus, null, 2));
+}
+
+// Load status from file
+function loadStatusFromFile() {
+  if (fs.existsSync(STATUS_FILE)) {
+    return JSON.parse(fs.readFileSync(STATUS_FILE));
+  }
+  return null;
+}
+
 // Update bot status function
 function updateBotStatus(status = DEFAULT_STATUS.message, type = DEFAULT_STATUS.type) {
   if (!client.user) {
@@ -56,11 +71,8 @@ function updateBotStatus(status = DEFAULT_STATUS.message, type = DEFAULT_STATUS.
   }
 
   try {
-    // Store the status for persistent reapplication
-    persistentStatus = {
-      message: status,
-      type: type
-    };
+    persistentStatus = { message: status, type: type };
+    saveStatusToFile(); // Save to file
 
     client.user.setPresence({
       activities: [{ 
@@ -95,29 +107,31 @@ client.once('ready', () => {
   log('INFO', `Connected to ${client.guilds.cache.size} server(s)`, '\x1b[34m');
   log('INFO', `Ping: ${client.ws.ping} ms`, '\x1b[34m');
 
-  // Set default status
-  updateBotStatus(DEFAULT_STATUS.message, DEFAULT_STATUS.type);
+  // Load last status from file
+  const lastStatus = loadStatusFromFile();
+  if (lastStatus) {
+    log('INFO', 'Restoring last saved status...', '\x1b[36m');
+    updateBotStatus(lastStatus.message, lastStatus.type);
+  } else {
+    updateBotStatus(DEFAULT_STATUS.message, DEFAULT_STATUS.type);
+  }
 
-  // Periodically reapply persistent status to prevent overwriting
+  // Reapply status every 30 seconds
   setInterval(() => {
     if (persistentStatus) {
+      log('DEBUG', 'Reapplying persistent status...', '\x1b[36m');
       updateBotStatus(persistentStatus.message, persistentStatus.type);
     }
-  }, 30 * 1000); // Every 5 minutes
+  }, 30 * 1000); // Every 30 seconds
 });
 
 // Command to update status
 client.on('messageCreate', async (message) => {
-  // Check if the message is from an owner
   if (!OWNER_IDS.includes(message.author.id)) return;
-
-  // Check if message starts with a specific prefix
   if (!message.content.startsWith('!status')) return;
 
-  // Split the command into parts
   const args = message.content.slice(7).trim().split(' ');
   
-  // If no arguments, show usage
   if (args.length === 0) {
     return message.reply({
       content: 'Usage: !status <type> <message>\n' +
@@ -126,31 +140,32 @@ client.on('messageCreate', async (message) => {
     });
   }
 
-  // Determine activity type (first argument)
   const type = args[0].toUpperCase();
-  
-  // Rest of the arguments become the status message
   const status = args.slice(1).join(' ') || DEFAULT_STATUS.message;
 
-  // Update status
+  if (!ACTIVITY_TYPES[type]) {
+    return message.reply('Invalid type! Use: PLAYING, STREAMING, LISTENING, WATCHING, COMPETING');
+  }
+
   const success = updateBotStatus(status, type);
   
-  // Respond to the user
   if (success) {
-    message.reply(`Status updated to: ${status} (${type})`);
+    message.reply(`✅ Status updated to: ${status} (${type})`);
   } else {
-    message.reply('Failed to update status. Check console for details.');
+    message.reply('❌ Failed to update status. Check console for details.');
   }
 });
 
 // Prevent other status changes
 client.on('presenceUpdate', (oldPresence, newPresence) => {
-  // If we have a persistent status and it's different from the current one
+  log('DEBUG', `Presence update detected for ${newPresence.user.tag}`, '\x1b[36m');
+
   if (persistentStatus && 
       (!newPresence.activities[0] || 
        newPresence.activities[0].name !== persistentStatus.message ||
        newPresence.activities[0].type !== ACTIVITY_TYPES[persistentStatus.type])) {
-    // Reapply our persistent status
+    
+    log('WARNING', `Status was changed! Reverting to: ${persistentStatus.message} (${persistentStatus.type})`, '\x1b[33m');
     updateBotStatus(persistentStatus.message, persistentStatus.type);
   }
 });
