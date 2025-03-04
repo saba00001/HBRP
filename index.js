@@ -27,7 +27,7 @@ app.listen(port, () => {
 // Configuration
 const OWNER_IDS = ['1326983284168720505']; // Replace with your Discord User ID
 const BOT_ABOUT_ME = "Horizon Beyond Role Play Official Bot";
-const BOT_ACTIVITY_STATUS = "🎮 Playing Horizon Beyond Role Play";
+const BOT_PLAYING_STATUS = "Horizon Beyond Server";
 
 // Logging function
 function log(type, message, color = '\x1b[37m') {
@@ -48,16 +48,13 @@ async function login() {
   }
 }
 
-// Update bot status function
-function updateBotStatus() {
-  client.user.setPresence({
-    activities: [{ 
-      name: BOT_ACTIVITY_STATUS, 
-      type: ActivityType.Custom 
-    }],
-    status: 'online',
+// Set Playing status function
+function setPlayingStatus() {
+  client.user.setActivity({
+    name: BOT_PLAYING_STATUS,
+    type: ActivityType.Playing
   });
-  log('STATUS', `Bot status set to: ${BOT_ACTIVITY_STATUS}`);
+  log('STATUS', `Playing status set to: ${BOT_PLAYING_STATUS}`);
 }
 
 // Heartbeat function to keep bot alive
@@ -109,28 +106,43 @@ function setupMessageCommands() {
       }
     }
 
-    // Change activity status
-    if (message.content.startsWith('!activity')) {
-      const newActivityStatus = message.content.slice(9).trim();
+    // Change About Me
+    if (message.content.startsWith('!aboutme')) {
+      const newAboutMe = message.content.slice(8).trim();
       
-      if (!newActivityStatus) {
-        return message.reply('Please provide an activity status');
+      if (!newAboutMe) {
+        return message.reply('Please provide an About Me description');
       }
 
       try {
-        client.user.setPresence({
-          activities: [{ 
-            name: newActivityStatus, 
-            type: ActivityType.Custom 
-          }],
-          status: 'online',
+        await client.user.setProfile({ bio: newAboutMe });
+        message.reply(`About Me updated to: "${newAboutMe}"`);
+        log('PROFILE', `About Me changed to: ${newAboutMe}`, '\x1b[33m');
+      } catch (error) {
+        log('ERROR', `Failed to update About Me: ${error}`, '\x1b[31m');
+        message.reply('Failed to update About Me');
+      }
+    }
+
+    // Change Playing status
+    if (message.content.startsWith('!playing')) {
+      const newPlayingStatus = message.content.slice(8).trim();
+      
+      if (!newPlayingStatus) {
+        return message.reply('Please provide a playing status');
+      }
+
+      try {
+        client.user.setActivity({
+          name: newPlayingStatus,
+          type: ActivityType.Playing
         });
 
-        message.reply(`Activity status updated to: "${newActivityStatus}"`);
-        log('STATUS', `Activity status changed to: ${newActivityStatus}`, '\x1b[33m');
+        message.reply(`Playing status updated to: "${newPlayingStatus}"`);
+        log('STATUS', `Playing status changed to: ${newPlayingStatus}`, '\x1b[33m');
       } catch (error) {
-        log('ERROR', `Failed to update activity status: ${error}`, '\x1b[31m');
-        message.reply('Failed to update activity status');
+        log('ERROR', `Failed to update playing status: ${error}`, '\x1b[31m');
+        message.reply('Failed to update playing status');
       }
     }
   });
@@ -140,14 +152,19 @@ function setupMessageCommands() {
 client.once('ready', () => {
   log('INFO', `Ping: ${client.ws.ping} ms`, '\x1b[34m');
   
-  // Set initial status
-  updateBotStatus();
+  // Set initial playing status
+  setPlayingStatus();
   
   // Start heartbeat
   startHeartbeat();
   
   // Setup message commands
   setupMessageCommands();
+
+  // Set initial About Me
+  client.user.setProfile({ bio: BOT_ABOUT_ME })
+    .then(() => log('PROFILE', `About Me set to: ${BOT_ABOUT_ME}`, '\x1b[35m'))
+    .catch(error => log('ERROR', `Failed to set About Me: ${error}`, '\x1b[31m'));
 });
 
 // Handle unhandled promise rejections
