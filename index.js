@@ -40,13 +40,13 @@ function updateBotStatus() {
     return;
   }
 
-  client.user.setPresence({
-    activities: [{ 
-      name: BOT_ACTIVITY_STATUS, 
-      type: ActivityType.Watching  // შეცვლილია Watching-ზე
-    }],
-    status: 'online',
-  });
+client.user.setPresence({
+  activities: [{ 
+    name: "Horizon Beyond Role Play", 
+    type: ActivityType.Playing 
+  }],
+  status: 'online',
+});
 
   log('STATUS', `Bot status set to: ${BOT_ACTIVITY_STATUS}`, '\x1b[33m');
 }
