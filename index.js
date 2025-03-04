@@ -24,7 +24,11 @@ app.listen(port, () => {
 });
 
 // Configuration
-const OWNER_IDS = ['1326983284168720505']; // Replace with your Discord ID
+const OWNER_IDS = ['1326983284168720505']; // Replace with your Discord user ID
+const DEFAULT_STATUS = {
+  message: "Horizon Beyond Server",
+  type: "WATCHING"
+};
 
 // Logging function
 function log(type, message, color = '\x1b[37m') {
@@ -41,14 +45,23 @@ const ACTIVITY_TYPES = {
   COMPETING: ActivityType.Competing
 };
 
+// Persistent status storage
+let persistentStatus = null;
+
 // Update bot status function
-function updateBotStatus(status = "Horizon Beyond Server", type = "WATCHING") {
+function updateBotStatus(status = DEFAULT_STATUS.message, type = DEFAULT_STATUS.type) {
   if (!client.user) {
     log('ERROR', 'client.user is not ready yet!', '\x1b[31m');
     return false;
   }
 
   try {
+    // Store the status for persistent reapplication
+    persistentStatus = {
+      message: status,
+      type: type
+    };
+
     client.user.setPresence({
       activities: [{ 
         name: status, 
@@ -82,7 +95,15 @@ client.once('ready', () => {
   log('INFO', `Connected to ${client.guilds.cache.size} server(s)`, '\x1b[34m');
   log('INFO', `Ping: ${client.ws.ping} ms`, '\x1b[34m');
 
-  updateBotStatus(); // Set default status
+  // Set default status
+  updateBotStatus(DEFAULT_STATUS.message, DEFAULT_STATUS.type);
+
+  // Periodically reapply persistent status to prevent overwriting
+  setInterval(() => {
+    if (persistentStatus) {
+      updateBotStatus(persistentStatus.message, persistentStatus.type);
+    }
+  }, 5 * 60 * 1000); // Every 5 minutes
 });
 
 // Command to update status
@@ -109,7 +130,7 @@ client.on('messageCreate', async (message) => {
   const type = args[0].toUpperCase();
   
   // Rest of the arguments become the status message
-  const status = args.slice(1).join(' ') || "Horizon Beyond Server";
+  const status = args.slice(1).join(' ') || DEFAULT_STATUS.message;
 
   // Update status
   const success = updateBotStatus(status, type);
@@ -119,6 +140,18 @@ client.on('messageCreate', async (message) => {
     message.reply(`Status updated to: ${status} (${type})`);
   } else {
     message.reply('Failed to update status. Check console for details.');
+  }
+});
+
+// Prevent other status changes
+client.on('presenceUpdate', (oldPresence, newPresence) => {
+  // If we have a persistent status and it's different from the current one
+  if (persistentStatus && 
+      (!newPresence.activities[0] || 
+       newPresence.activities[0].name !== persistentStatus.message ||
+       newPresence.activities[0].type !== ACTIVITY_TYPES[persistentStatus.type])) {
+    // Reapply our persistent status
+    updateBotStatus(persistentStatus.message, persistentStatus.type);
   }
 });
 
