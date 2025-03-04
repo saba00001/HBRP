@@ -107,23 +107,10 @@ client.once('ready', () => {
   log('INFO', `Connected to ${client.guilds.cache.size} server(s)`, '\x1b[34m');
   log('INFO', `Ping: ${client.ws.ping} ms`, '\x1b[34m');
 
-  // Load last status from file
-  const lastStatus = loadStatusFromFile();
-  if (lastStatus) {
-    log('INFO', 'Restoring last saved status...', '\x1b[36m');
-    updateBotStatus(lastStatus.message, lastStatus.type);
-  } else {
-    updateBotStatus(DEFAULT_STATUS.message, DEFAULT_STATUS.type);
-  }
-
-  // Reapply status every 30 seconds
-  setInterval(() => {
-    if (persistentStatus) {
-      log('DEBUG', 'Reapplying persistent status...', '\x1b[36m');
-      updateBotStatus(persistentStatus.message, persistentStatus.type);
-    }
-  },3 * 60 * 1000); // Every 30 seconds
+  // Set status only once
+  updateBotStatus(DEFAULT_STATUS.message, DEFAULT_STATUS.type);
 });
+
 
 // Command to update status
 client.on('messageCreate', async (message) => {
