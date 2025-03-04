@@ -26,7 +26,6 @@ app.listen(port, () => {
 
 // Configuration
 const OWNER_IDS = ['1326983284168720505']; // შეცვალე შენი Discord ID-თ
-const BOT_ABOUT_ME = "Horizon Beyond Role Play Official Bot";
 const BOT_PLAYING_STATUS = "Horizon Beyond Server";
 
 // Logging function
@@ -42,15 +41,6 @@ async function login() {
         log('LOGIN', `Logged in as: ${client.user.tag}`, '\x1b[32m');
         log('INFO', `Bot ID: ${client.user.id}`, '\x1b[35m');
         log('INFO', `Connected to ${client.guilds.cache.size} server(s)`, '\x1b[34m');
-
-        // Set profile bio (About Me)
-        if (client.user.setProfile) {
-            await client.user.setProfile({ bio: BOT_ABOUT_ME });
-            log('PROFILE', `About Me set to: ${BOT_ABOUT_ME}`, '\x1b[35m');
-        } else {
-            log('ERROR', 'setProfile() method is not available in this API version', '\x1b[31m');
-        }
-
     } catch (error) {
         log('ERROR', `Failed to log in: ${error}`, '\x1b[31m');
         process.exit(1);
