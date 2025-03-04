@@ -43,7 +43,7 @@ function updateBotStatus() {
   client.user.setPresence({
     activities: [{ 
       name: BOT_ACTIVITY_STATUS, 
-      type: ActivityType.Watching  // შეცვლილია Watching-ზე
+      type: ActivityType.Playing  // შეცვლილია Watching-ზე
     }],
     status: 'online',
   });
