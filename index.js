@@ -122,7 +122,7 @@ client.once('ready', () => {
       log('DEBUG', 'Reapplying persistent status...', '\x1b[36m');
       updateBotStatus(persistentStatus.message, persistentStatus.type);
     }
-  }, 30 * 1000); // Every 30 seconds
+  },3 * 60 * 1000); // Every 30 seconds
 });
 
 // Command to update status
