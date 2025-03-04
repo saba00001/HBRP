@@ -103,7 +103,7 @@ client.once('ready', () => {
     if (persistentStatus) {
       updateBotStatus(persistentStatus.message, persistentStatus.type);
     }
-  }, 5 * 60 * 1000); // Every 5 minutes
+  }, 30 * 1000); // Every 5 minutes
 });
 
 // Command to update status
