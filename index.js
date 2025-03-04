@@ -72,19 +72,24 @@ function heartbeat() {
   }, 30000);
 }
 
-client.once('ready', () => {
-  console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
-  // ბიოს დამატება
-    try {
-        await client.user.edit({ about: "🔥 This is my bot's bio! Join my Discord server!" });
-        console.log('\x1b[32m[ BIO ]\x1b[0m', 'Profile bio updated successfully!');
-    } catch (error) {
-        console.error('\x1b[31m[ ERROR ]\x1b[
-  
-                      
-  updateStatus();
-  setInterval(updateStatus, 10000);
-  heartbeat();
+client.once('ready', async () => {
+    console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
+
+    // ბიოს დამატება (Discord API-ს მხარდაჭერის შემთხვევაში)
+    if (client.user && client.user.edit) {
+        try {
+            await client.user.edit({ about: "🔥 This is my bot's bio! Join my Discord server!" });
+            console.log('\x1b[32m[ BIO ]\x1b[0m', 'Profile bio updated successfully!');
+        } catch (error) {
+            console.error('\x1b[31m[ ERROR ]\x1b[0m', 'Failed to update bio:', error);
+        }
+    } else {
+        console.log('\x1b[31m[ ERROR ]\x1b[0m', 'Bio editing is not supported in this Discord.js version.');
+    }
+
+    updateStatus();
+    setInterval(updateStatus, 10000);
+    heartbeat();
 });
 
 login();
