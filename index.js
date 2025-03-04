@@ -16,8 +16,7 @@ const port = 3000;
 
 // Express server setup
 app.get('/', (req, res) => {
-  const imagePath = path.join(__dirname, 'index.html');
-  res.sendFile(imagePath);
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(port, () => {
@@ -25,7 +24,7 @@ app.listen(port, () => {
 });
 
 // Configuration
-const OWNER_IDS = ['1326983284168720505']; // Replace with your Discord User ID
+const OWNER_IDS = ['1326983284168720505']; // შენი Discord ID ჩასვი აქ
 const BOT_ABOUT_ME = "Horizon Beyond Role Play Official Bot";
 const BOT_ACTIVITY_STATUS = "Horizon Beyond Server";
 
@@ -39,9 +38,6 @@ function log(type, message, color = '\x1b[37m') {
 async function login() {
   try {
     await client.login(process.env.TOKEN);
-    log('LOGIN', `Logged in as: ${client.user.tag}`, '\x1b[32m');
-    log('INFO', `Bot ID: ${client.user.id}`, '\x1b[35m');
-    log('INFO', `Connected to ${client.guilds.cache.size} server(s)`, '\x1b[34m');
   } catch (error) {
     log('ERROR', `Failed to log in: ${error}`, '\x1b[31m');
     process.exit(1);
@@ -50,14 +46,16 @@ async function login() {
 
 // Update bot status function
 function updateBotStatus() {
-  client.user.setPresence({
-    activities: [{ 
-      name: BOT_ACTIVITY_STATUS, 
-      type: ActivityType.Custom 
-    }],
-    status: 'online',
-  });
-  log('STATUS', `Bot status set to: ${BOT_ACTIVITY_STATUS}`);
+  if (client.user) {
+    client.user.setPresence({
+      activities: [{ 
+        name: BOT_ACTIVITY_STATUS, 
+        type: ActivityType.Watching  // შეცვლილია Custom -> Watching
+      }],
+      status: 'online',
+    });
+    log('STATUS', `Bot status set to: ${BOT_ACTIVITY_STATUS}`);
+  }
 }
 
 // Heartbeat function to keep bot alive
@@ -70,37 +68,26 @@ function startHeartbeat() {
 // Message sending command
 function setupMessageCommands() {
   client.on('messageCreate', async (message) => {
-    // Check if the message is from an owner
     if (!OWNER_IDS.includes(message.author.id)) return;
 
-    // Send message to a specific channel
     if (message.content.startsWith('!sms')) {
-      // Split the message into parts
       const parts = message.content.split(' ');
-      
-      // Check if the command has at least 3 parts (command, channel, message)
+
       if (parts.length < 3) {
         return message.reply('Usage: !sms #channel Your message here');
       }
 
-      // Extract the channel mention
-      const channelMention = parts[1];
-      
-      // Remove the channel mention from parts and rejoin the rest as the message
-      const messageText = parts.slice(2).join(' ');
+      const channel = message.mentions.channels.first() || 
+                      message.guild.channels.cache.get(parts[1].replace(/\D/g, ''));
 
-      // Find the channel by its mention
-      const channel = message.mentions.channels.first();
-      
       if (!channel) {
-        return message.reply('Invalid channel. Please use a channel mention.');
+        return message.reply('Invalid channel. Please use a channel mention or ID.');
       }
 
+      const messageText = parts.slice(2).join(' ');
+
       try {
-        // Send the message to the specified channel
         await channel.send(messageText);
-        
-        // Confirm the message was sent
         await message.reply(`Message sent to ${channel}`);
         log('SMS', `Message sent to ${channel.name}`, '\x1b[33m');
       } catch (error) {
@@ -109,19 +96,18 @@ function setupMessageCommands() {
       }
     }
 
-    // Change activity status
     if (message.content.startsWith('!activity')) {
       const newActivityStatus = message.content.slice(9).trim();
       
       if (!newActivityStatus) {
-        return message.reply('Please provide an activity status');
+        return message.reply('Please provide an activity status.');
       }
 
       try {
         client.user.setPresence({
           activities: [{ 
             name: newActivityStatus, 
-            type: ActivityType.Custom 
+            type: ActivityType.Playing  // შეცვლილია Custom -> Playing
           }],
           status: 'online',
         });
@@ -130,7 +116,7 @@ function setupMessageCommands() {
         log('STATUS', `Activity status changed to: ${newActivityStatus}`, '\x1b[33m');
       } catch (error) {
         log('ERROR', `Failed to update activity status: ${error}`, '\x1b[31m');
-        message.reply('Failed to update activity status');
+        message.reply('Failed to update activity status.');
       }
     }
   });
@@ -138,15 +124,13 @@ function setupMessageCommands() {
 
 // Bot ready event
 client.once('ready', () => {
+  log('LOGIN', `Logged in as: ${client.user.tag}`, '\x1b[32m');
+  log('INFO', `Bot ID: ${client.user.id}`, '\x1b[35m');
+  log('INFO', `Connected to ${client.guilds.cache.size} server(s)`, '\x1b[34m');
   log('INFO', `Ping: ${client.ws.ping} ms`, '\x1b[34m');
-  
-  // Set initial status
+
   updateBotStatus();
-  
-  // Start heartbeat
   startHeartbeat();
-  
-  // Setup message commands
   setupMessageCommands();
 });
 
