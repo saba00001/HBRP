@@ -13,103 +13,147 @@ const client = new Client({
 
 const app = express();
 const port = 3000;
+
+// Express server setup
 app.get('/', (req, res) => {
   const imagePath = path.join(__dirname, 'index.html');
   res.sendFile(imagePath);
 });
+
 app.listen(port, () => {
-  console.log('\x1b[36m[ SERVER ]\x1b[0m', '\x1b[32m SH : http://localhost:' + port + ' ✅\x1b[0m');
+  console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32m SH : http://localhost:${port} ✅\x1b[0m`);
 });
 
-// Configuration for bot's about me and activities
-const botConfig = {
-  aboutMe: "Horizon Beyond Role Play Official Bot - Your ultimate companion for immersive roleplay experiences! Created by sabbsaa with love and dedication.",
-  statusMessages: [
-    "Exploring Roleplay Universes",
-    "Creating Epic Storylines",
-    "Connecting Roleplayers Worldwide",
-    "Bringing Imagination to Life"
-  ],
-  statusTypes: [
-    { type: ActivityType.Playing, name: "Roleplay Simulator" },
-    { type: ActivityType.Watching, name: "Character Stories" },
-    { type: ActivityType.Competing, name: "Narrative Challenges" },
-    { type: ActivityType.Streaming, name: "Roleplay Adventures" }
-  ]
-};
+// Configuration
+const OWNER_IDS = ['1326983284168720505']; // Replace with your Discord User ID
+const BOT_ABOUT_ME = "Horizon Beyond Role Play Official Bot";
+const BOT_ACTIVITY_STATUS = "🎮 Playing Horizon Beyond Role Play";
 
-let currentStatusIndex = 0;
+// Logging function
+function log(type, message, color = '\x1b[37m') {
+  const timestamp = new Date().toLocaleTimeString();
+  console.log(`${color}[ ${type} ] ${timestamp}: ${message}\x1b[0m`);
+}
 
+// Login function
 async function login() {
   try {
     await client.login(process.env.TOKEN);
-    console.log('\x1b[36m[ LOGIN ]\x1b[0m', `\x1b[32mLogged in as: ${client.user.tag} ✅\x1b[0m`);
-    console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
-    console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
+    log('LOGIN', `Logged in as: ${client.user.tag}`, '\x1b[32m');
+    log('INFO', `Bot ID: ${client.user.id}`, '\x1b[35m');
+    log('INFO', `Connected to ${client.guilds.cache.size} server(s)`, '\x1b[34m');
   } catch (error) {
-    console.error('\x1b[31m[ ERROR ]\x1b[0m', 'Failed to log in:', error);
+    log('ERROR', `Failed to log in: ${error}`, '\x1b[31m');
     process.exit(1);
   }
 }
 
-function updateStatus() {
-  const currentStatus = botConfig.statusMessages[currentStatusIndex];
-  const currentStatusType = botConfig.statusTypes[currentStatusIndex];
-  
+// Update bot status function
+function updateBotStatus() {
   client.user.setPresence({
     activities: [{ 
-      name: currentStatus, 
-      type: currentStatusType.type 
+      name: BOT_ACTIVITY_STATUS, 
+      type: ActivityType.Custom 
     }],
     status: 'online',
   });
-  
-  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${currentStatus} (${currentStatusType.type})`);
-  
-  currentStatusIndex = (currentStatusIndex + 1) % botConfig.statusMessages.length;
+  log('STATUS', `Bot status set to: ${BOT_ACTIVITY_STATUS}`);
 }
 
-function heartbeat() {
+// Heartbeat function to keep bot alive
+function startHeartbeat() {
   setInterval(() => {
-    console.log('\x1b[35m[ HEARTBEAT ]\x1b[0m', `Bot is alive at ${new Date().toLocaleTimeString()}`);
+    log('HEARTBEAT', 'Bot is alive', '\x1b[36m');
   }, 30000);
 }
 
-client.once('ready', async () => {
-  console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
-  
-  // Set bot's about me (bio)
-  try {
-    await client.user.edit({
-      bio: botConfig.aboutMe
-    });
-    console.log('\x1b[36m[ PROFILE ]\x1b[0m', '\x1b[32mBot profile updated successfully! ✅\x1b[0m');
-  } catch (error) {
-    console.error('\x1b[31m[ ERROR ]\x1b[0m', 'Failed to update bot profile:', error);
-  }
-  
-  updateStatus();
-  setInterval(updateStatus, 15000);
-  heartbeat();
-});
+// Message sending command
+function setupMessageCommands() {
+  client.on('messageCreate', async (message) => {
+    // Check if the message is from an owner
+    if (!OWNER_IDS.includes(message.author.id)) return;
 
-// Message spoofing functionality
-client.on('messageCreate', async (message) => {
-  // Check if the message starts with a specific command to send a spoofed message
-  if (message.content.startsWith('!spoofmessage')) {
-    // Split the command to get the message to spoof
-    const spoofMessage = message.content.slice('!spoofmessage'.length).trim();
-    
-    if (spoofMessage) {
-      // Send the spoofed message in the same channel
-      await message.channel.send(spoofMessage);
+    // Send message to a specific channel
+    if (message.content.startsWith('!sms')) {
+      // Split the message into parts
+      const parts = message.content.split(' ');
       
-      // Optionally, delete the original command message
-      await message.delete();
-    } else {
-      message.reply('Please provide a message to spoof. Usage: !spoofmessage Your message here');
+      // Check if the command has at least 3 parts (command, channel, message)
+      if (parts.length < 3) {
+        return message.reply('Usage: !sms #channel Your message here');
+      }
+
+      // Extract the channel mention
+      const channelMention = parts[1];
+      
+      // Remove the channel mention from parts and rejoin the rest as the message
+      const messageText = parts.slice(2).join(' ');
+
+      // Find the channel by its mention
+      const channel = message.mentions.channels.first();
+      
+      if (!channel) {
+        return message.reply('Invalid channel. Please use a channel mention.');
+      }
+
+      try {
+        // Send the message to the specified channel
+        await channel.send(messageText);
+        
+        // Confirm the message was sent
+        await message.reply(`Message sent to ${channel}`);
+        log('SMS', `Message sent to ${channel.name}`, '\x1b[33m');
+      } catch (error) {
+        log('ERROR', `Failed to send SMS: ${error}`, '\x1b[31m');
+        await message.reply('Failed to send the message.');
+      }
     }
-  }
+
+    // Change activity status
+    if (message.content.startsWith('!activity')) {
+      const newActivityStatus = message.content.slice(9).trim();
+      
+      if (!newActivityStatus) {
+        return message.reply('Please provide an activity status');
+      }
+
+      try {
+        client.user.setPresence({
+          activities: [{ 
+            name: newActivityStatus, 
+            type: ActivityType.Custom 
+          }],
+          status: 'online',
+        });
+
+        message.reply(`Activity status updated to: "${newActivityStatus}"`);
+        log('STATUS', `Activity status changed to: ${newActivityStatus}`, '\x1b[33m');
+      } catch (error) {
+        log('ERROR', `Failed to update activity status: ${error}`, '\x1b[31m');
+        message.reply('Failed to update activity status');
+      }
+    }
+  });
+}
+
+// Bot ready event
+client.once('ready', () => {
+  log('INFO', `Ping: ${client.ws.ping} ms`, '\x1b[34m');
+  
+  // Set initial status
+  updateBotStatus();
+  
+  // Start heartbeat
+  startHeartbeat();
+  
+  // Setup message commands
+  setupMessageCommands();
 });
 
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (error) => {
+  log('UNHANDLED REJECTION', error, '\x1b[31m');
+});
+
+// Login to Discord
 login();
