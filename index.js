@@ -21,38 +21,16 @@ app.listen(port, () => {
     console.log('\x1b[36m[ SERVER ]\x1b[0m', '\x1b[32m SH : http://localhost:' + port + ' ✅\x1b[0m');
 });
 
-// Mapping of activity types to their corresponding Discord.js ActivityType
-const ACTIVITY_TYPES = {
-    'play': ActivityType.Playing,
-    'watch': ActivityType.Watching,
-    'listen': ActivityType.Listening,
-    'compete': ActivityType.Competing,
-    'custom': ActivityType.Custom
-};
-
-let currentStatus = {
-    type: ActivityType.Custom,
-    name: "🎧 Listening to Spotify"
-};
-
-function updateStatus(activityType = currentStatus.type, activityName = currentStatus.name) {
-    client.user.setPresence({
-        activities: [{ 
-            name: activityName, 
-            type: activityType 
-        }],
-        status: 'online' // You can change this to 'dnd', 'idle', etc.
-    });
-    
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${activityName} (${Object.keys(ACTIVITY_TYPES).find(key => ACTIVITY_TYPES[key] === activityType)})`);
-    
-    // Update current status
-    currentStatus = { type: activityType, name: activityName };
-}
+// Configuration for playing panel
+const PLAYING_PANELS = [
+    { name: "HBRP", details: "High Base RP Server" },
+    { name: "Valorant", details: "Competitive Gameplay" },
+    { name: "GTA V", details: "Role Play Server" }
+];
 
 client.on('messageCreate', (message) => {
-    // Check if message starts with !activity
-    if (!message.content.startsWith('!activity')) return;
+    // Check if message starts with !playing
+    if (!message.content.startsWith('!playing')) return;
     
     // Ignore messages from bots
     if (message.author.bot) return;
@@ -61,24 +39,34 @@ client.on('messageCreate', (message) => {
     const args = message.content.split(' ');
     
     // Check if the command has enough arguments
-    if (args.length < 3) {
-        return message.reply('Usage: !activity <type> <status>\nTypes: play, watch, listen, compete, custom');
+    if (args.length < 2) {
+        return message.reply('Usage: !playing <game name>\nAvailable games: ' + 
+            PLAYING_PANELS.map(panel => panel.name).join(', '));
     }
     
-    // Get the activity type and name
-    const activityType = args[1].toLowerCase();
-    const activityName = args.slice(2).join(' ');
+    // Get the game name (everything after !playing)
+    const gameName = args.slice(1).join(' ');
     
-    // Check if the activity type is valid
-    if (!ACTIVITY_TYPES[activityType]) {
-        return message.reply('Invalid activity type. Use: play, watch, listen, compete, custom');
+    // Find the matching panel
+    const selectedPanel = PLAYING_PANELS.find(panel => 
+        panel.name.toLowerCase() === gameName.toLowerCase()
+    );
+    
+    // If no matching panel found
+    if (!selectedPanel) {
+        return message.reply('Game not found. Available games: ' + 
+            PLAYING_PANELS.map(panel => panel.name).join(', '));
     }
     
-    // Update the status
-    updateStatus(ACTIVITY_TYPES[activityType], activityName);
+    // Update the playing panel
+    client.user.setActivity({
+        name: selectedPanel.name,
+        type: ActivityType.Playing,
+        details: selectedPanel.details
+    });
     
     // Confirm the status change
-    message.reply(`Status updated to ${activityType}: ${activityName}`);
+    message.reply(`Now playing: ${selectedPanel.name} (${selectedPanel.details})`);
 });
 
 async function login() {
@@ -102,8 +90,12 @@ function heartbeat() {
 client.once('ready', () => {
     console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
     
-    // Initial status
-    updateStatus();
+    // Set initial playing panel
+    client.user.setActivity({
+        name: "HBRP",
+        type: ActivityType.Playing,
+        details: "High Base RP Server"
+    });
     
     heartbeat();
 });
