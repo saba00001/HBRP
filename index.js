@@ -29,16 +29,11 @@ function updateStatus() {
   console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
 }
 
-// `setTimeout`-ის წაგება BotGhost-ის სტარტის შემდეგ
+// `setInterval`-ის ოპტიმიზაცია, რათა BotGhost-ი ვეღარ ჩაერიოს
 function setStatusInterval() {
   setInterval(() => {
-    updateStatus(); // განაახლეთ სტატუსი ყოველ 10 წამში
-  }, 10000);
-  
-  setTimeout(() => {
-    // ეს ბლოკი მინიმუმ 30 წამში ერთხელ აგრძელებს ფუნქციონირებას
-    setStatusInterval();
-  }, 30000);
+    updateStatus(); // განაახლეთ სტატუსი ყოველ 1000 მილიწამში (1 წამში)
+  }, 1000); // 1 წამი, რათა BotGhost ვეღარ ჩაახშოს
 }
 
 function heartbeat() {
@@ -53,7 +48,7 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
   
   updateStatus();
-  setStatusInterval(); // 30 წამში ერთხელ იწყებს ფუნქციონირებას
+  setStatusInterval(); // 1 წამში ერთხელ იწყებს ფუნქციონირებას
   heartbeat();
 });
 
