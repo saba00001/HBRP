@@ -7,8 +7,7 @@ const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.DirectMessages // Added to enable DM functionality
+    GatewayIntentBits.MessageContent
   ],
 });
 
@@ -76,58 +75,6 @@ client.on('messageCreate', async (message) => {
 
   // Check if the user is the owner
   const isOwner = message.author.id === OWNER_ID;
-
-  // !dm command to send a direct message (only for owner)
-  if (message.content.startsWith('!dm ')) {
-    // Check owner permissions
-    if (!isOwner) {
-      const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
-      // Delete denial message after 3 seconds
-      setTimeout(() => safeDelete(deniedMsg), 3000);
-      return;
-    }
-
-    const parts = message.content.slice(4).trim().split(' ');
-    if (parts.length < 2) {
-      const usageMsg = await message.reply('❌ Usage: !dm [user_id] [message]');
-      // Delete usage message after 3 seconds
-      setTimeout(() => safeDelete(usageMsg), 3000);
-      return;
-    }
-
-    const userId = parts[0];
-    const dmText = parts.slice(1).join(' ');
-
-    try {
-      // Attempt to fetch the user
-      const user = await client.users.fetch(userId);
-
-      if (!user) {
-        const notFoundMsg = await message.reply(`❌ User with ID ${userId} not found.`);
-        // Delete not found message after 3 seconds
-        setTimeout(() => safeDelete(notFoundMsg), 3000);
-        return;
-      }
-
-      // Send direct message
-      await user.send(dmText);
-
-      // Delete the original command message
-      await safeDelete(message);
-
-      // Optional: Send a confirmation to the owner in the original channel
-      const confirmMsg = await message.channel.send(`✅ DM sent to user ${user.tag}`);
-      // Delete confirmation message after 3 seconds
-      setTimeout(() => safeDelete(confirmMsg), 3000);
-
-    } catch (error) {
-      console.error('Error sending DM:', error);
-      const failedMsg = await message.channel.send('❌ Failed to send DM. Check user ID and bot permissions.');
-      // Delete failed message after 3 seconds
-      setTimeout(() => safeDelete(failedMsg), 3000);
-    }
-    return;
-  }
 
   // !sms command to send a message in the current channel (only for owner)
   if (message.content.startsWith('!sms ')) {
@@ -212,6 +159,10 @@ client.on('messageCreate', async (message) => {
 
 client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
+  
+  // Disable message button on bot profile
+  client.user.setFlags({ ALLOW_DM: false });
+  
   updateStatus();
   setInterval(updateStatus, 10000);
   heartbeat();
