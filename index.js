@@ -52,7 +52,7 @@ function forceStatusLoop() {
       status: 'dnd'
     });
     console.log('\x1b[33m[ STATUS ]\x1b[0m', `Forced status reset: ${forcedStatus.message}`);
-  }, 3000); // ყოველ 3 წამში აყენებს იძულებით
+  }, 120000); // ყოველ 3 წამში აყენებს იძულებით
 }
 
 client.on('messageCreate', (message) => {
