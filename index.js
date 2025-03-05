@@ -26,7 +26,8 @@ app.listen(port, () => {
 const statusTypes = {
   watching: ActivityType.Watching,
   playing: ActivityType.Playing,
-  listening: ActivityType.Listening
+  listening: ActivityType.Listening,
+  streaming: ActivityType.Streaming
 };
 
 let forcedStatus = { type: 'playing', message: 'GTA IV Vanguard' };
