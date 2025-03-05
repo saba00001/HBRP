@@ -1,21 +1,3 @@
-/*
-
-☆.。.:*・°☆.。.:*・°☆.。.:*・°☆.。.:*・°☆
-                                                 
-  _________ ___ ___ ._______   _________    
- /   _____//   |   \|   \   \ /   /  _  \   
- \_____  \/    ~    \   |\   Y   /  /_\  \  
- /        \    Y    /   | \     /    |    \ 
-/_______  /\___|_  /|___|  \___/\____|__  / 
-        \/       \/                     \/  
-                    
-DISCORD :  https://discord.com/invite/xQF9f9yUEM                   
-YouTube : https://www.youtube.com/@GlaceYT                         
-                                                                       
-☆.。.:*・°☆.。.:*・°☆.。.:*・°☆.。.:*・°☆
-
-
-*/
 const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
 require('dotenv').config();
 const express = require('express');
@@ -37,24 +19,19 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', '\x1b[32m SH : http://localhost:' + port + ' ✅\x1b[0m');
 });
 
-const statusMessages = ["🎧 Listening to Spotify", "🎮 Playing VALORANT"];
-const statusTypes = [ 'dnd', 'idle'];
+const statusMessages = ["🎧 Listening to Spotify", "🎮 Playing VALORANT", "GTA IV Vanguard"];
+const statusTypes = ['dnd', 'idle'];
 let currentStatusIndex = 0;
 let currentTypeIndex = 0;
 
-async function blockBotGhostStatus() {
-  await client.user.setPresence({
-    activities: [{ name: "GTA IV Vanguard", type: ActivityType.Playing }],
-    status: "dnd",
-  });
-
-  setInterval(() => {
-    client.user.setPresence({
-      activities: [{ name: statusMessages[currentStatusIndex], type: ActivityType.Playing }],
-      status: statusTypes[currentTypeIndex],
-    });
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Forced status update: ${statusMessages[currentStatusIndex]}`);
-  }, 5000); // ყოველ 5 წამში იძულებით განახლება
+async function login() {
+  try {
+    await client.login(process.env.TOKEN);
+    console.log('\x1b[36m[ LOGIN ]\x1b[0m', `\x1b[32mLogged in as: ${client.user.tag} ✅\x1b[0m`);
+  } catch (error) {
+    console.error('\x1b[31m[ ERROR ]\x1b[0m', 'Failed to log in:', error);
+    process.exit(1);
+  }
 }
 
 function updateStatus() {
@@ -83,27 +60,7 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
   updateStatus();
   heartbeat();
-  blockBotGhostStatus(); // BotGhost სტატუსის დაბლოკვა
+  blockBotGhostStatus(); // BotGhost-ის სტატუსის დაბლოკვა
 });
 
 login();
-
-  
-/*
-
-☆.。.:*・°☆.。.:*・°☆.。.:*・°☆.。.:*・°☆
-                                                 
-  _________ ___ ___ ._______   _________    
- /   _____//   |   \|   \   \ /   /  _  \   
- \_____  \/    ~    \   |\   Y   /  /_\  \  
- /        \    Y    /   | \     /    |    \ 
-/_______  /\___|_  /|___|  \___/\____|__  / 
-        \/       \/                     \/  
-                    
-DISCORD :  https://discord.com/invite/xQF9f9yUEM                   
-YouTube : https://www.youtube.com/@GlaceYT                         
-                                                                       
-☆.。.:*・°☆.。.:*・°☆.。.:*・°☆.。.:*・°☆
-
-
-*/
