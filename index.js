@@ -19,7 +19,7 @@ app.listen(port, () => {
 });
 
 function updateStatus() {
-  if (!client.user) return; // თუ ბოტი ჯერ არ არის შემოსული, არ გააგრძელოს ფუნქცია
+  if (!client.user) return; 
 
   client.user.setPresence({
     activities: [{ name: "HBRP", type: ActivityType.Playing }],
@@ -29,9 +29,15 @@ function updateStatus() {
   console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
 }
 
+function heartbeat() {
+  setInterval(() => {
+    console.log('\x1b[35m[ HEARTBEAT ]\x1b[0m', `Bot is alive at ${new Date().toLocaleTimeString()}`);
+  }, 30000);
+}
+
 function setStatusInterval() {
   setInterval(() => {
-    updateStatus(); // განაახლე სტატუსი ყოველ 5 წამში
+    updateStatus();
   }, 5000); // 5 წამში ერთხელ
 }
 
@@ -41,8 +47,8 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
 
   updateStatus();
-  setStatusInterval(); // 5 წამში ერთხელ იწყებს ფუნქციონირებას
-  heartbeat();
+  setStatusInterval();
+  heartbeat(); // აქ უკვე ფუნქცია განსაზღვრულია და შეცდომა აღარ მოხდება
 });
 
 async function login() {
