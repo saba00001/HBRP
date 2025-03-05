@@ -20,7 +20,7 @@ app.listen(port, () => {
 
 function updateStatus() {
   if (!client.user) return; // თუ ბოტი ჯერ არ არის შემოსული, არ გააგრძელოს ფუნქცია
-  
+
   client.user.setPresence({
     activities: [{ name: "HBRP", type: ActivityType.Playing }],
     status: 'online',
@@ -29,10 +29,21 @@ function updateStatus() {
   console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
 }
 
+// `setTimeout`-ის წაგება BotGhost-ის სტარტის შემდეგ
+function setStatusInterval() {
+  setInterval(() => {
+    updateStatus(); // განაახლეთ სტატუსი ყოველ 10 წამში
+  }, 10000);
+  
+  setTimeout(() => {
+    // ეს ბლოკი მინიმუმ 30 წამში ერთხელ აგრძელებს ფუნქციონირებას
+    setStatusInterval();
+  }, 30000);
+}
+
 function heartbeat() {
   setInterval(() => {
     console.log('\x1b[35m[ HEARTBEAT ]\x1b[0m', `Bot is alive at ${new Date().toLocaleTimeString()}`);
-    updateStatus(); // ყოველ 30 წამში ერთხელ განვაახლოთ სტატუსი
   }, 30000);
 }
 
@@ -42,7 +53,7 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
   
   updateStatus();
-  setInterval(updateStatus, 7000); // ყოველ 10 წამში ერთხელ განახლდეს სტატუსი
+  setStatusInterval(); // 30 წამში ერთხელ იწყებს ფუნქციონირებას
   heartbeat();
 });
 
