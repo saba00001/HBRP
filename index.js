@@ -21,21 +21,65 @@ app.listen(port, () => {
     console.log('\x1b[36m[ SERVER ]\x1b[0m', '\x1b[32m SH : http://localhost:' + port + ' ✅\x1b[0m');
 });
 
-// Default initial status
-const DEFAULT_STATUS = {
-    name: "VALORANT",
-    type: ActivityType.Playing
+// Mapping of activity types to their corresponding Discord.js ActivityType
+const ACTIVITY_TYPES = {
+    'play': ActivityType.Playing,
+    'watch': ActivityType.Watching,
+    'listen': ActivityType.Listening,
+    'compete': ActivityType.Competing,
+    'custom': ActivityType.Custom
 };
 
-// Replace with YOUR Discord User ID 
-const OWNER_ID = process.env.1326983284168720505;
-
-const STATUS_TYPES = {
-    play: ActivityType.Playing,
-    listen: ActivityType.Listening,
-    watch: ActivityType.Watching,
-    compete: ActivityType.Competing
+let currentStatus = {
+    type: ActivityType.Custom,
+    name: "🎧 Listening to Spotify"
 };
+
+function updateStatus(activityType = currentStatus.type, activityName = currentStatus.name) {
+    client.user.setPresence({
+        activities: [{ 
+            name: activityName, 
+            type: activityType 
+        }],
+        status: 'online' // You can change this to 'dnd', 'idle', etc.
+    });
+    
+    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${activityName} (${Object.keys(ACTIVITY_TYPES).find(key => ACTIVITY_TYPES[key] === activityType)})`);
+    
+    // Update current status
+    currentStatus = { type: activityType, name: activityName };
+}
+
+client.on('messageCreate', (message) => {
+    // Check if message starts with !activity
+    if (!message.content.startsWith('!activity')) return;
+    
+    // Ignore messages from bots
+    if (message.author.bot) return;
+    
+    // Split the message into parts
+    const args = message.content.split(' ');
+    
+    // Check if the command has enough arguments
+    if (args.length < 3) {
+        return message.reply('Usage: !activity <type> <status>\nTypes: play, watch, listen, compete, custom');
+    }
+    
+    // Get the activity type and name
+    const activityType = args[1].toLowerCase();
+    const activityName = args.slice(2).join(' ');
+    
+    // Check if the activity type is valid
+    if (!ACTIVITY_TYPES[activityType]) {
+        return message.reply('Invalid activity type. Use: play, watch, listen, compete, custom');
+    }
+    
+    // Update the status
+    updateStatus(ACTIVITY_TYPES[activityType], activityName);
+    
+    // Confirm the status change
+    message.reply(`Status updated to ${activityType}: ${activityName}`);
+});
 
 async function login() {
     try {
@@ -49,68 +93,19 @@ async function login() {
     }
 }
 
-function setCustomStatus(game, type = 'play') {
-    const activityType = STATUS_TYPES[type] || ActivityType.Playing;
-    
-    client.user.setPresence({
-        activities: [{ 
-            name: game, 
-            type: activityType 
-        }],
-        status: 'online',
-    });
-    
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${game} (${type})`);
-    return `Status updated to ${type} ${game}`;
+function heartbeat() {
+    setInterval(() => {
+        console.log('\x1b[35m[ HEARTBEAT ]\x1b[0m', `Bot is alive at ${new Date().toLocaleTimeString()}`);
+    }, 30000);
 }
-
-// Event listener for status change command
-client.on('messageCreate', message => {
-    // Check if the message starts with !status
-    if (!message.content.startsWith('!status')) return;
-    
-    // Prevent usage in DMs
-    if (!message.guild) return;
-    
-    // Check if the message author is the bot owner
-    if (message.author.id !== OWNER_ID) {
-        return message.reply('ამ კომანდის გამოყენების უფლება გაქვს მხოლოდ ბოტის მფლობელს.');
-    }
-    
-    // Parse the command
-    const args = message.content.slice('!status'.length).trim().split(/ +/);
-    
-    // If no arguments, show current status
-    if (args.length === 0) {
-        const currentActivity = client.user.presence.activities[0];
-        return message.reply(`Current status: ${currentActivity ? `${currentActivity.type} ${currentActivity.name}` : 'No status set'}`);
-    }
-    
-    // Determine type (optional)
-    let type = 'play';
-    let statusText = args.join(' ');
-    
-    // Check if first argument is a valid status type
-    if (Object.keys(STATUS_TYPES).includes(args[0])) {
-        type = args[0];
-        statusText = args.slice(1).join(' ');
-    }
-    
-    // Validate status text
-    if (!statusText) {
-        return message.reply('გთხოვთ შეიყვანოთ სტატუსის ტექსტი.');
-    }
-    
-    // Set the status
-    const response = setCustomStatus(statusText, type);
-    message.reply(response);
-});
 
 client.once('ready', () => {
     console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
     
-    // Set initial default status
-    setCustomStatus(DEFAULT_STATUS.name, Object.keys(STATUS_TYPES).find(key => STATUS_TYPES[key] === DEFAULT_STATUS.type));
+    // Initial status
+    updateStatus();
+    
+    heartbeat();
 });
 
 login();
