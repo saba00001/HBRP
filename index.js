@@ -70,7 +70,7 @@ function heartbeat() {
 client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
   updateStatus();
-  setInterval(updateStatus, 30000);
+  setInterval(updateStatus, 30001);
   heartbeat();
 });
 
