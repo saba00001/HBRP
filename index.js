@@ -8,6 +8,12 @@ const client = new Client({
     GatewayIntentBits.Guilds, 
     GatewayIntentBits.GuildPresences
   ],
+  ws: {
+    properties: {
+      // გამორთეთ სტანდარტული სტატუს სინქრონიზაცია
+      status: 'invisible'
+    }
+  }
 });
 
 const app = express();
@@ -21,43 +27,42 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32mSH : http://localhost:${port} ✅\x1b[0m`);
 });
 
-async function setPermanentStatus() {
+async function setFinalStatus() {
   try {
     if (!client.user) return;
 
-    // ძლიერი სტატუსის დაყენება
-    await client.user.setActivity({
-      name: "HBRP",
-      type: ActivityType.Playing
+    console.log('\x1b[33m[ STATUS DEBUG ]\x1b[0m', 'Attempting to set final status');
+
+    // სტატუსის დაყენება რამდენიმე მეთოდით
+    await client.user.setPresence({
+      activities: [{ 
+        name: "HBRP", 
+        type: ActivityType.Competing 
+      }],
+      status: 'online'
     });
 
-    await client.user.setStatus('online');
-
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Locked status to: Playing HBRP`);
+    // დამატებითი დაცვა
+    await client.user.setActivity("HBRP", { type: ActivityType.Competing });
+    
+    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Locked status to: Competing in HBRP`);
   } catch (error) {
     console.error('\x1b[31m[ STATUS ERROR ]\x1b[0m', error);
   }
 }
 
-function createStatusProtector() {
-  const originalSetActivity = client.user.setActivity.bind(client.user);
-  const originalSetStatus = client.user.setStatus.bind(client.user);
-
-  client.user.setActivity = async (...args) => {
-    if (args[0]?.name !== "HBRP") {
-      console.log('\x1b[31m[ STATUS BLOCK ]\x1b[0m', 'Blocked unauthorized status change');
-      return setPermanentStatus();
+function createPersistentStatusProtection() {
+  // ინტერვალი სტატუსის პერმანენტული დაცვისთვის
+  const statusProtector = setInterval(async () => {
+    try {
+      await setFinalStatus();
+    } catch (error) {
+      console.error('\x1b[31m[ STATUS PROTECT ERROR ]\x1b[0m', error);
     }
-    return originalSetActivity(...args);
-  };
+  }, 5000); // ყოველ 5 წამში
 
-  client.user.setStatus = async (...args) => {
-    if (args[0] !== 'online') {
-      console.log('\x1b[31m[ STATUS BLOCK ]\x1b[0m', 'Blocked unauthorized status change');
-      return setPermanentStatus();
-    }
-    return originalSetStatus(...args);
-  };
+  // იმ შემთხვევაში თუ დაიხურება ინტერვალი
+  return () => clearInterval(statusProtector);
 }
 
 function heartbeat() {
@@ -71,27 +76,25 @@ client.once('ready', async () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
 
-  // დაელოდეთ მცირე ხანს სანამ სრულად მზად იქნება
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // დაყოვნება სრული ჩატვირთვის შემდეგ
+  await new Promise(resolve => setTimeout(resolve, 2000));
 
-  // სტატუსის დაყენება
-  await setPermanentStatus();
+  // სტატუსის საბოლოო დაყენება
+  await setFinalStatus();
 
-  // სტატუსის დამცავი მექანიზმის შექმნა
-  createStatusProtector();
-
-  // პერიოდული განახლება
-  setInterval(setPermanentStatus, 5000);
+  // სტატუსის დამცავი მექანიზმი
+  const stopStatusProtector = createPersistentStatusProtection();
 
   // heartbeat გაშვება
   heartbeat();
-});
 
-// სტატუსის ცვლილების აღკვეთა
-client.on('presenceUpdate', async (oldPresence, newPresence) => {
-  if (newPresence.user.id === client.user.id) {
-    await setPermanentStatus();
-  }
+  // სტატუსის ცვლილების აღკვეთა
+  client.on('presenceUpdate', async (oldPresence, newPresence) => {
+    if (newPresence.user.id === client.user.id) {
+      console.log('\x1b[33m[ STATUS DEBUG ]\x1b[0m', 'Presence update detected, blocking...');
+      await setFinalStatus();
+    }
+  });
 });
 
 async function login() {
