@@ -10,6 +10,9 @@ const client = new Client({
 const app = express();
 const port = 3000;
 
+// სტატუსის ცვლილების თვალყურის დევნე
+let lastStatus = null;
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -18,28 +21,26 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32mSH : http://localhost:${port} ✅\x1b[0m`);
 });
 
+// სტატუსის განახლება მხოლოდ მაშინ, როცა საჭიროა
 function updateStatus() {
-  if (!client.user) return; // თუ ბოტი ჯერ არ არის შემოსული, არ გააგრძელოს ფუნქცია
+  const newStatus = { name: "HBRP", type: ActivityType.Playing };
 
-  client.user.setPresence({
-    activities: [{ name: "HBRP", type: ActivityType.Playing }],
-    status: 'online',
-  });
+  // მხოლოდ მაშინ განახლდეს, თუ სტატუსი შეიცვალა
+  if (lastStatus !== newStatus.name) {
+    client.user.setPresence({
+      activities: [newStatus],
+      status: 'online',
+    });
 
-  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
-}
-
-// `setInterval`-ის ოპტიმიზაცია, რათა BotGhost-ი ვეღარ ჩაერიოს
-function setStatusInterval() {
-  setInterval(() => {
-    updateStatus(); // განაახლეთ სტატუსი ყოველ 1000 მილიწამში (1 წამში)
-  }, 1000); // 1 წამი, რათა BotGhost ვეღარ ჩაახშოს
+    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
+    lastStatus = newStatus.name;  // ახალ სტატუსად მივნიშნავთ
+  }
 }
 
 function heartbeat() {
   setInterval(() => {
     console.log('\x1b[35m[ HEARTBEAT ]\x1b[0m', `Bot is alive at ${new Date().toLocaleTimeString()}`);
-  }, 30000);
+  }, 30000); // ყოველ 30 წამის შემდეგ
 }
 
 client.once('ready', () => {
@@ -47,8 +48,8 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
   
-  updateStatus();
-  setStatusInterval(); // 1 წამში ერთხელ იწყებს ფუნქციონირებას
+  updateStatus(); // სტატუსის განახლება ბოტის დაწყებისთანავე
+  setInterval(updateStatus, 30001); // 30 წამში ერთხელ განახლდება სტატუსი
   heartbeat();
 });
 
