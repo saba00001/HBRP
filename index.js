@@ -30,6 +30,9 @@ const statusTypes = ['dnd', 'idle'];
 let currentStatusIndex = 0;
 let currentTypeIndex = 0;
 
+// Store the last sent command message to prevent duplicate sending
+let lastCommandMessage = null;
+
 async function safeDelete(message) {
   try {
     if (message && message.deletable) {
@@ -70,6 +73,9 @@ function heartbeat() {
   }, 30000);
 }
 
+// Create a map to store ongoing conversations
+const conversationMap = new Map();
+
 client.on('messageCreate', async (message) => {
   // Ignore messages from bots
   if (message.author.bot) return;
@@ -77,12 +83,80 @@ client.on('messageCreate', async (message) => {
   // Check if the user is the owner
   const isOwner = message.author.id === OWNER_ID;
 
+  // Handle direct messages to the bot
+  if (message.channel.type === 'DM') {
+    // Add the conversation to the map if not already present
+    if (!conversationMap.has(message.author.id)) {
+      conversationMap.set(message.author.id, []);
+    }
+
+    // Store the message in the conversation
+    const conversationHistory = conversationMap.get(message.author.id);
+    conversationHistory.push({
+      author: message.author.username,
+      content: message.content
+    });
+
+    // Notify the owner about the new message
+    const ownerUser = await client.users.fetch(OWNER_ID);
+    const formattedMessage = `📩 **New DM from ${message.author.tag}**\n\`\`\`\n${message.content}\n\`\`\`\nReply using: !reply ${message.author.id} [your message]`;
+    await ownerUser.send(formattedMessage);
+
+    return;
+  }
+
+  // !reply command to respond to a DM (only for owner)
+  if (message.content.startsWith('!reply ')) {
+    // Check owner permissions
+    if (!isOwner) {
+      const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
+      setTimeout(() => safeDelete(deniedMsg), 3000);
+      return;
+    }
+
+    const parts = message.content.slice(7).trim().split(' ');
+    if (parts.length < 2) {
+      const usageMsg = await message.reply('❌ Usage: !reply [user_id] [message]');
+      setTimeout(() => safeDelete(usageMsg), 3000);
+      return;
+    }
+
+    const userId = parts[0];
+    const replyText = parts.slice(1).join(' ');
+
+    try {
+      // Fetch the user
+      const user = await client.users.fetch(userId);
+
+      if (!user) {
+        const notFoundMsg = await message.reply(`❌ User with ID ${userId} not found.`);
+        setTimeout(() => safeDelete(notFoundMsg), 3000);
+        return;
+      }
+
+      // Send direct message
+      await user.send(replyText);
+
+      // Delete the original command message
+      await safeDelete(message);
+
+      // Optional: Send a confirmation to the owner in the original channel
+      const confirmMsg = await message.channel.send(`✅ Reply sent to user ${user.tag}`);
+      setTimeout(() => safeDelete(confirmMsg), 3000);
+
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      const failedMsg = await message.channel.send('❌ Failed to send reply. Check user ID and bot permissions.');
+      setTimeout(() => safeDelete(failedMsg), 3000);
+    }
+    return;
+  }
+
   // !dm command to send a direct message (only for owner)
   if (message.content.startsWith('!dm ')) {
     // Check owner permissions
     if (!isOwner) {
       const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
-      // Delete denial message after 3 seconds
       setTimeout(() => safeDelete(deniedMsg), 3000);
       return;
     }
@@ -90,7 +164,6 @@ client.on('messageCreate', async (message) => {
     const parts = message.content.slice(4).trim().split(' ');
     if (parts.length < 2) {
       const usageMsg = await message.reply('❌ Usage: !dm [user_id] [message]');
-      // Delete usage message after 3 seconds
       setTimeout(() => safeDelete(usageMsg), 3000);
       return;
     }
@@ -104,7 +177,6 @@ client.on('messageCreate', async (message) => {
 
       if (!user) {
         const notFoundMsg = await message.reply(`❌ User with ID ${userId} not found.`);
-        // Delete not found message after 3 seconds
         setTimeout(() => safeDelete(notFoundMsg), 3000);
         return;
       }
@@ -117,13 +189,11 @@ client.on('messageCreate', async (message) => {
 
       // Optional: Send a confirmation to the owner in the original channel
       const confirmMsg = await message.channel.send(`✅ DM sent to user ${user.tag}`);
-      // Delete confirmation message after 3 seconds
       setTimeout(() => safeDelete(confirmMsg), 3000);
 
     } catch (error) {
       console.error('Error sending DM:', error);
       const failedMsg = await message.channel.send('❌ Failed to send DM. Check user ID and bot permissions.');
-      // Delete failed message after 3 seconds
       setTimeout(() => safeDelete(failedMsg), 3000);
     }
     return;
@@ -134,7 +204,6 @@ client.on('messageCreate', async (message) => {
     // Check owner permissions
     if (!isOwner) {
       const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
-      // Delete denial message after 3 seconds
       setTimeout(() => safeDelete(deniedMsg), 3000);
       return;
     }
@@ -142,6 +211,16 @@ client.on('messageCreate', async (message) => {
     const smsText = message.content.slice(5).trim();
     if (smsText) {
       try {
+        // Prevent duplicate sending by checking the last command message
+        if (lastCommandMessage && lastCommandMessage.content === message.content) {
+          const duplicateMsg = await message.reply('❌ Message already sent. Duplicate prevented.');
+          setTimeout(() => safeDelete(duplicateMsg), 3000);
+          return;
+        }
+
+        // Update the last command message
+        lastCommandMessage = message;
+
         // Delete only the original command message
         await safeDelete(message);
 
@@ -150,12 +229,10 @@ client.on('messageCreate', async (message) => {
       } catch (error) {
         console.error('Error sending SMS:', error);
         const errorMsg = await message.channel.send('❌ Failed to send SMS.');
-        // Delete error message after 3 seconds
         setTimeout(() => safeDelete(errorMsg), 3000);
       }
     } else {
       const invalidMsg = await message.reply('❌ Please provide a message text after !sms');
-      // Delete invalid message after 3 seconds
       setTimeout(() => safeDelete(invalidMsg), 3000);
     }
     return;
@@ -166,7 +243,6 @@ client.on('messageCreate', async (message) => {
     // Check owner permissions
     if (!isOwner) {
       const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
-      // Delete denial message after 3 seconds
       setTimeout(() => safeDelete(deniedMsg), 3000);
       return;
     }
@@ -174,7 +250,6 @@ client.on('messageCreate', async (message) => {
     const parts = message.content.slice(6).trim().split(' ');
     if (parts.length < 2) {
       const usageMsg = await message.reply('❌ Usage: !send [channel] [message]');
-      // Delete usage message after 3 seconds
       setTimeout(() => safeDelete(usageMsg), 3000);
       return;
     }
@@ -189,12 +264,21 @@ client.on('messageCreate', async (message) => {
 
     if (!targetChannel) {
       const notFoundMsg = await message.reply(`❌ Channel #${channelName} not found.`);
-      // Delete not found message after 3 seconds
       setTimeout(() => safeDelete(notFoundMsg), 3000);
       return;
     }
 
     try {
+      // Prevent duplicate sending by checking the last command message
+      if (lastCommandMessage && lastCommandMessage.content === message.content) {
+        const duplicateMsg = await message.reply('❌ Message already sent. Duplicate prevented.');
+        setTimeout(() => safeDelete(duplicateMsg), 3000);
+        return;
+      }
+
+      // Update the last command message
+      lastCommandMessage = message;
+
       // Delete the original command message
       await safeDelete(message);
 
@@ -203,7 +287,6 @@ client.on('messageCreate', async (message) => {
     } catch (error) {
       console.error('Error sending message:', error);
       const failedMsg = await message.channel.send('❌ Failed to send message. Check bot permissions.');
-      // Delete failed message after 3 seconds
       setTimeout(() => safeDelete(failedMsg), 3000);
     }
     return;
