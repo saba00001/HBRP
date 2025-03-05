@@ -4,7 +4,7 @@ const express = require('express');
 const path = require('path');
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildPresences],
 });
 
 const app = express();
@@ -24,7 +24,7 @@ function updateStatus() {
   client.user.setPresence({
     activities: [{ name: "HBRP", type: ActivityType.Playing }],
     status: 'online',
-  });
+  }).catch(console.error);
 
   console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
 }
@@ -35,20 +35,35 @@ function heartbeat() {
   }, 30000);
 }
 
-function setStatusInterval() {
-  setInterval(() => {
-    updateStatus();
-  }, 5000); // 5 წამში ერთხელ
+function protectStatus() {
+  if (!client.user) return;
+
+  client.user.setPresence({
+    activities: [{ name: "HBRP", type: ActivityType.Playing }],
+    status: 'online',
+  }).catch(console.error);
 }
+
+// ბოტის სტატუსის დაცვა სხვადასხვა მეთოდებით
+client.on('presenceUpdate', (oldPresence, newPresence) => {
+  if (newPresence.user.id === client.user.id) {
+    updateStatus();
+  }
+});
 
 client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[32mLogged in as: ${client.user.tag} ✅\x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
 
+  // სტატუსის დაყენება პირველად
   updateStatus();
-  setStatusInterval();
-  heartbeat(); // აქ უკვე ფუნქცია განსაზღვრულია და შეცდომა აღარ მოხდება
+  
+  // სტატუსის პერიოდული დაცვა
+  setInterval(protectStatus, 2000);
+  
+  // heartbeat გაშვება
+  heartbeat();
 });
 
 async function login() {
