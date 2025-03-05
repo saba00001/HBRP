@@ -42,16 +42,19 @@ const statusTypes = [ 'dnd', 'idle'];
 let currentStatusIndex = 0;
 let currentTypeIndex = 0;
 
-async function login() {
-  try {
-    await client.login(process.env.TOKEN);
-    console.log('\x1b[36m[ LOGIN ]\x1b[0m', `\x1b[32mLogged in as: ${client.user.tag} ✅\x1b[0m`);
-    console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
-    console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
-  } catch (error) {
-    console.error('\x1b[31m[ ERROR ]\x1b[0m', 'Failed to log in:', error);
-    process.exit(1);
-  }
+async function blockBotGhostStatus() {
+  await client.user.setPresence({
+    activities: [{ name: "GTA IV Vanguard", type: ActivityType.Playing }],
+    status: "dnd",
+  });
+
+  setInterval(() => {
+    client.user.setPresence({
+      activities: [{ name: statusMessages[currentStatusIndex], type: ActivityType.Playing }],
+      status: statusTypes[currentTypeIndex],
+    });
+    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Forced status update: ${statusMessages[currentStatusIndex]}`);
+  }, 5000); // ყოველ 5 წამში იძულებით განახლება
 }
 
 function updateStatus() {
@@ -79,9 +82,8 @@ function blockBotGhostStatus() {
 client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
   updateStatus();
-  setInterval(updateStatus, 10000);
   heartbeat();
-  blockBotGhostStatus(); // მუდმივად სტატუსის განახლება
+  blockBotGhostStatus(); // BotGhost სტატუსის დაბლოკვა
 });
 
 login();
