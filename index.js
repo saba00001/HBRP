@@ -42,7 +42,7 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
   
   updateStatus();
-  setInterval(updateStatus, 10000); // ყოველ 10 წამში ერთხელ განახლდეს სტატუსი
+  setInterval(updateStatus, 8000); // ყოველ 10 წამში ერთხელ განახლდეს სტატუსი
   heartbeat();
 });
 
