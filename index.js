@@ -24,7 +24,7 @@ app.listen(port, () => {
 // Owner's Discord user ID (replace with your actual Discord user ID)
 const OWNER_ID = '1326983284168720505';
 
-const statusMessages = ["🤖 DM-ები გამორთულია"];
+const statusMessages = ["🚫 ყველა შეტყობინება გამორთულია", "⛔ კომუნიკაცია შეზღუდულია"];
 const statusTypes = ['dnd', 'idle'];
 let currentStatusIndex = 0;
 let currentTypeIndex = 0;
@@ -69,108 +69,34 @@ function heartbeat() {
   }, 30000);
 }
 
-// Completely block direct messages
+// Completely block all messages and interactions
 client.on('messageCreate', async (message) => {
-  // Block all direct messages
-  if (message.channel.type === ChannelType.DM) {
+  // Block all messages in any context (DM or Server)
+  if (message.author.id !== OWNER_ID) {
     try {
-      await message.reply("⛔ DM შეტყობინებები გამორთულია. / DM messages are disabled.");
-    } catch (error) {
-      console.log('Could not send DM response');
-    }
-    return;
-  }
-
-  // Ignore messages from bots
-  if (message.author.bot) return;
-
-  // Check if the user is the owner
-  const isOwner = message.author.id === OWNER_ID;
-
-  // !sms command to send a message in the current channel (only for owner)
-  if (message.content.startsWith('!sms ')) {
-    // Check owner permissions
-    if (!isOwner) {
-      const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
-      // Delete denial message after 3 seconds
-      setTimeout(() => safeDelete(deniedMsg), 3000);
-      return;
-    }
-
-    const smsText = message.content.slice(5).trim();
-    if (smsText) {
-      try {
-        // Delete only the original command message
+      // If not in DM, try to delete the message
+      if (message.channel.type !== ChannelType.DM) {
         await safeDelete(message);
-
-        // Send the SMS in the current channel (this message will remain)
-        await message.channel.send(smsText);
-      } catch (error) {
-        console.error('Error sending SMS:', error);
-        const errorMsg = await message.channel.send('❌ Failed to send SMS.');
-        // Delete error message after 3 seconds
-        setTimeout(() => safeDelete(errorMsg), 3000);
       }
-    } else {
-      const invalidMsg = await message.reply('❌ Please provide a message text after !sms');
-      // Delete invalid message after 3 seconds
-      setTimeout(() => safeDelete(invalidMsg), 3000);
-    }
-    return;
-  }
 
-  // !send command to send a message to a specific channel (only for owner)
-  if (message.content.startsWith('!send ')) {
-    // Check owner permissions
-    if (!isOwner) {
-      const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
-      // Delete denial message after 3 seconds
-      setTimeout(() => safeDelete(deniedMsg), 3000);
-      return;
-    }
-
-    const parts = message.content.slice(6).trim().split(' ');
-    if (parts.length < 2) {
-      const usageMsg = await message.reply('❌ Usage: !send [channel] [message]');
-      // Delete usage message after 3 seconds
-      setTimeout(() => safeDelete(usageMsg), 3000);
-      return;
-    }
-
-    const channelName = parts[0];
-    const smsText = parts.slice(1).join(' ');
-
-    // Find the target channel
-    const targetChannel = message.guild.channels.cache.find(
-      channel => channel.name.toLowerCase() === channelName.toLowerCase()
-    );
-
-    if (!targetChannel) {
-      const notFoundMsg = await message.reply(`❌ Channel #${channelName} not found.`);
-      // Delete not found message after 3 seconds
-      setTimeout(() => safeDelete(notFoundMsg), 3000);
-      return;
-    }
-
-    try {
-      // Delete the original command message
-      await safeDelete(message);
-
-      // Send message to the target channel
-      await targetChannel.send(smsText);
+      // Send a blocking message
+      const blockMessage = await message.reply("⛔ შეტყობინებები გამორთულია. / Messages are disabled.");
+      
+      // Delete the block message after 3 seconds
+      setTimeout(() => {
+        safeDelete(blockMessage).catch(console.error);
+      }, 3000);
     } catch (error) {
-      console.error('Error sending message:', error);
-      const failedMsg = await message.channel.send('❌ Failed to send message. Check bot permissions.');
-      // Delete failed message after 3 seconds
-      setTimeout(() => safeDelete(failedMsg), 3000);
+      console.error('Error handling blocked message:', error);
     }
     return;
   }
 });
 
-// Block interaction with bot
+// Block all interactions completely
 client.on('interactionCreate', async (interaction) => {
-  if (interaction.isMessageComponent() || interaction.type === 'MESSAGE_COMPONENT') {
+  // Block interactions for non-owner
+  if (interaction.user.id !== OWNER_ID) {
     try {
       await interaction.reply({ 
         content: "⛔ ურთიერთქმედება გამორთულია / Interactions are disabled", 
@@ -179,6 +105,19 @@ client.on('interactionCreate', async (interaction) => {
     } catch (error) {
       console.error('Error handling interaction:', error);
     }
+    return;
+  }
+});
+
+// Only allow owner commands in server
+client.on('messageCreate', async (message) => {
+  // Ignore messages from non-owners
+  if (message.author.id !== OWNER_ID) return;
+
+  // Owner-only commands can be added here if needed
+  if (message.content.startsWith('!owner')) {
+    // Example owner command
+    message.reply('👑 Owner command recognized');
   }
 });
 
