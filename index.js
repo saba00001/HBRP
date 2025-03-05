@@ -10,9 +10,6 @@ const client = new Client({
 const app = express();
 const port = 3000;
 
-// სტატუსის ცვლილების თვალყურის დევნე
-let lastStatus = null;
-
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
@@ -21,26 +18,33 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32mSH : http://localhost:${port} ✅\x1b[0m`);
 });
 
-// სტატუსის განახლება მხოლოდ მაშინ, როცა საჭიროა
 function updateStatus() {
-  const newStatus = { name: "HBRP", type: ActivityType.Playing };
+  if (!client.user) return; // თუ ბოტი ჯერ არ არის შემოსული, არ გააგრძელოს ფუნქცია
 
-  // მხოლოდ მაშინ განახლდეს, თუ სტატუსი შეიცვალა
-  if (lastStatus !== newStatus.name) {
-    client.user.setPresence({
-      activities: [newStatus],
-      status: 'online',
-    });
+  client.user.setPresence({
+    activities: [{ name: "HBRP", type: ActivityType.Playing }],
+    status: 'online',
+  });
 
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
-    lastStatus = newStatus.name;  // ახალ სტატუსად მივნიშნავთ
-  }
+  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
+}
+
+// `setTimeout`-ის წაგება BotGhost-ის სტარტის შემდეგ
+function setStatusInterval() {
+  setInterval(() => {
+    updateStatus(); // განაახლეთ სტატუსი ყოველ 10 წამში
+  }, 10000);
+  
+  setTimeout(() => {
+    // ეს ბლოკი მინიმუმ 30 წამში ერთხელ აგრძელებს ფუნქციონირებას
+    setStatusInterval();
+  }, 30000);
 }
 
 function heartbeat() {
   setInterval(() => {
     console.log('\x1b[35m[ HEARTBEAT ]\x1b[0m', `Bot is alive at ${new Date().toLocaleTimeString()}`);
-  }, 30000); // ყოველ 30 წამის შემდეგ
+  }, 30000);
 }
 
 client.once('ready', () => {
@@ -48,8 +52,8 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
   
-  updateStatus(); // სტატუსის განახლება ბოტის დაწყებისთანავე
-  setInterval(updateStatus, 30001); // 30 წამში ერთხელ განახლდება სტატუსი
+  updateStatus();
+  setStatusInterval(); // 30 წამში ერთხელ იწყებს ფუნქციონირებას
   heartbeat();
 });
 
