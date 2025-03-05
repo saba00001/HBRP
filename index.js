@@ -18,17 +18,28 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32mSH : http://localhost:${port} ✅\x1b[0m`);
 });
 
+const statuses = [
+  { name: "HBRP", type: ActivityType.Playing },
+  { name: "with friends", type: ActivityType.Playing },
+  { name: "on server", type: ActivityType.Watching }
+];
+
+function getRandomStatus() {
+  return statuses[Math.floor(Math.random() * statuses.length)];
+}
+
 function updateStatus() {
   if (!client.user) return; 
 
-  // Forcefully set the status to override any existing statuses
+  const randomStatus = getRandomStatus();
+  
   client.user.setPresence({
-    activities: [{ name: "HBRP", type: ActivityType.Playing }],
+    activities: [randomStatus],
     status: 'online',
     afk: false
   });
 
-  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
+  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${randomStatus.type === ActivityType.Playing ? 'Playing' : 'Watching'} ${randomStatus.name}`);
 }
 
 function heartbeat() {
@@ -38,10 +49,10 @@ function heartbeat() {
 }
 
 function setStatusInterval() {
-  // More aggressive status update interval
+  // Very frequent status updates to mask other bot's status
   setInterval(() => {
     updateStatus();
-  }, 2000); // Every 2 seconds to ensure status remains consistent
+  }, 1000); // Every second
 }
 
 client.once('ready', () => {
@@ -49,15 +60,13 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
 
-  // Immediately set and then continuously maintain the status
   updateStatus();
   setStatusInterval();
   heartbeat();
 });
 
-// Add event listener to handle potential status changes by other bots
+// Aggressively handle any presence updates
 client.on('presenceUpdate', (oldPresence, newPresence) => {
-  // Check if the presence update is for a bot
   if (newPresence.user.bot) {
     updateStatus(); // Immediately reset status if another bot tries to change it
   }
