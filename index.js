@@ -30,7 +30,7 @@ const statusTypes = {
   streaming: ActivityType.Streaming
 };
 
-let forcedStatus = { type: 'playing', message: 'GTA IV Vanguard' };
+let forcedStatus = { type: 'playing', message: 'HB:RP' };
 
 async function setCustomStatus(type, message) {
   if (!statusTypes[type]) {
