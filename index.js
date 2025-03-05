@@ -29,6 +29,16 @@ const statusTypes = ['dnd', 'idle'];
 let currentStatusIndex = 0;
 let currentTypeIndex = 0;
 
+async function safeDelete(message) {
+  try {
+    if (message && message.deletable) {
+      await message.delete();
+    }
+  } catch (error) {
+    console.error('Error deleting message:', error);
+  }
+}
+
 async function login() {
   try {
     await client.login(process.env.TOKEN);
@@ -68,48 +78,54 @@ client.on('messageCreate', async (message) => {
 
   // !sms command to send a message in the current channel (only for owner)
   if (message.content.startsWith('!sms ')) {
+    // Check owner permissions
     if (!isOwner) {
-      message.reply('❌ Sorry, only the bot owner can use this command.');
+      const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
+      // Delete denial message after 3 seconds
+      setTimeout(() => safeDelete(deniedMsg), 3000);
       return;
     }
 
     const smsText = message.content.slice(5).trim();
     if (smsText) {
       try {
+        // Delete the original command message
+        await safeDelete(message);
+
         // Send the SMS in the current channel
         const sentMessage = await message.channel.send(smsText);
-        
-        // Delete the original command message
-        await message.delete();
 
-        // Delete the sent SMS message after a short delay
-        setTimeout(async () => {
-          try {
-            await sentMessage.delete();
-          } catch (deleteError) {
-            console.error('Error deleting sent message:', deleteError);
-          }
-        }, 5000); // Delete after 5 seconds
+        // Delete the sent message after a short delay
+        setTimeout(() => safeDelete(sentMessage), 5000);
       } catch (error) {
         console.error('Error sending SMS:', error);
-        message.reply('❌ Failed to send SMS.');
+        const errorMsg = await message.channel.send('❌ Failed to send SMS.');
+        // Delete error message after 3 seconds
+        setTimeout(() => safeDelete(errorMsg), 3000);
       }
     } else {
-      message.reply('❌ Please provide a message text after !sms');
+      const invalidMsg = await message.reply('❌ Please provide a message text after !sms');
+      // Delete invalid message after 3 seconds
+      setTimeout(() => safeDelete(invalidMsg), 3000);
     }
     return;
   }
 
   // !send command to send a message to a specific channel (only for owner)
   if (message.content.startsWith('!send ')) {
+    // Check owner permissions
     if (!isOwner) {
-      message.reply('❌ Sorry, only the bot owner can use this command.');
+      const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
+      // Delete denial message after 3 seconds
+      setTimeout(() => safeDelete(deniedMsg), 3000);
       return;
     }
 
     const parts = message.content.slice(6).trim().split(' ');
     if (parts.length < 2) {
-      message.reply('❌ Usage: !send [channel] [message]');
+      const usageMsg = await message.reply('❌ Usage: !send [channel] [message]');
+      // Delete usage message after 3 seconds
+      setTimeout(() => safeDelete(usageMsg), 3000);
       return;
     }
 
@@ -122,40 +138,26 @@ client.on('messageCreate', async (message) => {
     );
 
     if (!targetChannel) {
-      message.reply(`❌ Channel #${channelName} not found.`);
+      const notFoundMsg = await message.reply(`❌ Channel #${channelName} not found.`);
+      // Delete not found message after 3 seconds
+      setTimeout(() => safeDelete(notFoundMsg), 3000);
       return;
     }
 
     try {
       // Delete the original command message
-      await message.delete();
+      await safeDelete(message);
 
       // Send message to the target channel
       const sentMessage = await targetChannel.send(smsText);
 
       // Delete the sent message after a short delay
-      setTimeout(async () => {
-        try {
-          await sentMessage.delete();
-        } catch (deleteError) {
-          console.error('Error deleting sent message:', deleteError);
-        }
-      }, 5000); // Delete after 5 seconds
-
-      // Optional: Send a confirmation message to the original channel
-      const confirmMsg = await message.channel.send(`✅ Message sent to #${channelName}`);
-      
-      // Delete the confirmation message after a short delay
-      setTimeout(async () => {
-        try {
-          await confirmMsg.delete();
-        } catch (deleteError) {
-          console.error('Error deleting confirmation message:', deleteError);
-        }
-      }, 3000); // Delete after 3 seconds
+      setTimeout(() => safeDelete(sentMessage), 5000);
     } catch (error) {
       console.error('Error sending message:', error);
-      message.reply('❌ Failed to send message. Check bot permissions.');
+      const failedMsg = await message.channel.send('❌ Failed to send message. Check bot permissions.');
+      // Delete failed message after 3 seconds
+      setTimeout(() => safeDelete(failedMsg), 3000);
     }
     return;
   }
