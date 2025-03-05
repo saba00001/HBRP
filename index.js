@@ -4,7 +4,10 @@ const express = require('express');
 const path = require('path');
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildPresences],
+  intents: [
+    GatewayIntentBits.Guilds, 
+    GatewayIntentBits.GuildPresences
+  ],
 });
 
 const app = express();
@@ -18,19 +21,43 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32mSH : http://localhost:${port} ✅\x1b[0m`);
 });
 
-async function updateStatus() {
+async function setPermanentStatus() {
   try {
-    if (!client.user) return; 
+    if (!client.user) return;
 
-    await client.user.setPresence({
-      activities: [{ name: "HBRP", type: ActivityType.Playing }],
-      status: 'online',
+    // ძლიერი სტატუსის დაყენება
+    await client.user.setActivity({
+      name: "HBRP",
+      type: ActivityType.Playing
     });
 
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
+    await client.user.setStatus('online');
+
+    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Locked status to: Playing HBRP`);
   } catch (error) {
     console.error('\x1b[31m[ STATUS ERROR ]\x1b[0m', error);
   }
+}
+
+function createStatusProtector() {
+  const originalSetActivity = client.user.setActivity.bind(client.user);
+  const originalSetStatus = client.user.setStatus.bind(client.user);
+
+  client.user.setActivity = async (...args) => {
+    if (args[0]?.name !== "HBRP") {
+      console.log('\x1b[31m[ STATUS BLOCK ]\x1b[0m', 'Blocked unauthorized status change');
+      return setPermanentStatus();
+    }
+    return originalSetActivity(...args);
+  };
+
+  client.user.setStatus = async (...args) => {
+    if (args[0] !== 'online') {
+      console.log('\x1b[31m[ STATUS BLOCK ]\x1b[0m', 'Blocked unauthorized status change');
+      return setPermanentStatus();
+    }
+    return originalSetStatus(...args);
+  };
 }
 
 function heartbeat() {
@@ -39,39 +66,32 @@ function heartbeat() {
   }, 30000);
 }
 
-async function protectStatus() {
-  try {
-    if (!client.user) return;
-
-    await client.user.setPresence({
-      activities: [{ name: "HBRP", type: ActivityType.Playing }],
-      status: 'online',
-    });
-  } catch (error) {
-    console.error('\x1b[31m[ PROTECT STATUS ERROR ]\x1b[0m', error);
-  }
-}
-
-// ბოტის სტატუსის დაცვა სხვადასხვა მეთოდებით
-client.on('presenceUpdate', async (oldPresence, newPresence) => {
-  if (newPresence.user.id === client.user.id) {
-    await updateStatus();
-  }
-});
-
 client.once('ready', async () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[32mLogged in as: ${client.user.tag} ✅\x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
 
-  // სტატუსის დაყენება პირველად
-  await updateStatus();
-  
-  // სტატუსის პერიოდული დაცვა
-  setInterval(protectStatus, 2000);
-  
+  // დაელოდეთ მცირე ხანს სანამ სრულად მზად იქნება
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // სტატუსის დაყენება
+  await setPermanentStatus();
+
+  // სტატუსის დამცავი მექანიზმის შექმნა
+  createStatusProtector();
+
+  // პერიოდული განახლება
+  setInterval(setPermanentStatus, 5000);
+
   // heartbeat გაშვება
   heartbeat();
+});
+
+// სტატუსის ცვლილების აღკვეთა
+client.on('presenceUpdate', async (oldPresence, newPresence) => {
+  if (newPresence.user.id === client.user.id) {
+    await setPermanentStatus();
+  }
 });
 
 async function login() {
