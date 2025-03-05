@@ -89,14 +89,11 @@ client.on('messageCreate', async (message) => {
     const smsText = message.content.slice(5).trim();
     if (smsText) {
       try {
-        // Delete the original command message
+        // Delete only the original command message
         await safeDelete(message);
 
-        // Send the SMS in the current channel
-        const sentMessage = await message.channel.send(smsText);
-
-        // Delete the sent message after a short delay
-        setTimeout(() => safeDelete(sentMessage), 5000);
+        // Send the SMS in the current channel (this message will remain)
+        await message.channel.send(smsText);
       } catch (error) {
         console.error('Error sending SMS:', error);
         const errorMsg = await message.channel.send('❌ Failed to send SMS.');
@@ -149,10 +146,7 @@ client.on('messageCreate', async (message) => {
       await safeDelete(message);
 
       // Send message to the target channel
-      const sentMessage = await targetChannel.send(smsText);
-
-      // Delete the sent message after a short delay
-      setTimeout(() => safeDelete(sentMessage), 5000);
+      await targetChannel.send(smsText);
     } catch (error) {
       console.error('Error sending message:', error);
       const failedMsg = await message.channel.send('❌ Failed to send message. Check bot permissions.');
