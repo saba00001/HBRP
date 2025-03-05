@@ -63,35 +63,34 @@ client.on('messageCreate', async (message) => {
   // Ignore messages from bots
   if (message.author.bot) return;
 
-  // !sms command to store a temporary SMS message
+  // !sms command to store and immediately send a message in the current channel
   if (message.content.startsWith('!sms ')) {
     const smsText = message.content.slice(5).trim();
     if (smsText) {
-      smsMessages.set(message.author.id, smsText);
-      message.reply(`✉️ SMS message saved. Use !send [channel] to send it.`);
+      try {
+        // Send the SMS in the current channel
+        await message.channel.send(smsText);
+        message.reply(`✅ SMS sent in this channel.`);
+      } catch (error) {
+        console.error('Error sending SMS:', error);
+        message.reply('❌ Failed to send SMS.');
+      }
     } else {
       message.reply('❌ Please provide a message text after !sms');
     }
     return;
   }
 
-  // !send command to send the stored SMS to a specific channel
+  // !send command to send a stored message to a specific channel
   if (message.content.startsWith('!send ')) {
     const parts = message.content.slice(6).trim().split(' ');
     if (parts.length < 2) {
-      message.reply('❌ Usage: !send [channel] [optional additional text]');
+      message.reply('❌ Usage: !send [channel] [message]');
       return;
     }
 
     const channelName = parts[0];
-    const additionalText = parts.slice(1).join(' ');
-
-    // Check if user has a stored SMS
-    const storedSms = smsMessages.get(message.author.id);
-    if (!storedSms) {
-      message.reply('❌ No SMS message saved. Use !sms to save a message first.');
-      return;
-    }
+    const smsText = parts.slice(1).join(' ');
 
     // Find the target channel
     const targetChannel = message.guild.channels.cache.find(
@@ -103,17 +102,9 @@ client.on('messageCreate', async (message) => {
       return;
     }
 
-    // Combine stored SMS with additional text if provided
-    const finalMessage = additionalText 
-      ? `${storedSms}\n\n${additionalText}` 
-      : storedSms;
-
     try {
-      await targetChannel.send(finalMessage);
+      await targetChannel.send(smsText);
       message.reply(`✅ Message sent to #${channelName}`);
-      
-      // Clear the stored SMS after sending
-      smsMessages.delete(message.author.id);
     } catch (error) {
       console.error('Error sending message:', error);
       message.reply('❌ Failed to send message. Check bot permissions.');
