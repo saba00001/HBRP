@@ -19,7 +19,7 @@ app.listen(port, () => {
 });
 
 function updateStatus() {
-  if (!client.user) return; 
+  if (!client.user) return;
 
   client.user.setPresence({
     activities: [{ name: "HBRP", type: ActivityType.Playing }],
@@ -36,9 +36,10 @@ function heartbeat() {
 }
 
 function setStatusInterval() {
+  updateStatus(); // სტატუსის მომენტალური გაშვება ბოტის ჩართვის დროს
   setInterval(() => {
-    updateStatus();
-  }, 5000); // 5 წამში ერთხელ
+    updateStatus(); // განახლება ყოველ 10 წამში
+  }, 10000);
 }
 
 client.once('ready', () => {
@@ -46,14 +47,14 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
 
-  updateStatus();
-  setStatusInterval();
-  heartbeat(); // აქ უკვე ფუნქცია განსაზღვრულია და შეცდომა აღარ მოხდება
+  setStatusInterval(); // სტატუსის მომენტალური დაყენება
+  heartbeat(); // სიცოცხლის სიგნალი
 });
 
 async function login() {
   try {
     await client.login(process.env.TOKEN);
+    updateStatus(); // სტატუსის დაყენება ავტორიზაციისთანავე
   } catch (error) {
     console.error('\x1b[31m[ ERROR ]\x1b[0m', 'Failed to log in:', error);
     process.exit(1);
