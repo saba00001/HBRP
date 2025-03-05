@@ -18,15 +18,19 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32mSH : http://localhost:${port} ✅\x1b[0m`);
 });
 
-function updateStatus() {
-  if (!client.user) return; 
+async function updateStatus() {
+  try {
+    if (!client.user) return; 
 
-  client.user.setPresence({
-    activities: [{ name: "HBRP", type: ActivityType.Playing }],
-    status: 'online',
-  }).catch(console.error);
+    await client.user.setPresence({
+      activities: [{ name: "HBRP", type: ActivityType.Playing }],
+      status: 'online',
+    });
 
-  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
+    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
+  } catch (error) {
+    console.error('\x1b[31m[ STATUS ERROR ]\x1b[0m', error);
+  }
 }
 
 function heartbeat() {
@@ -35,29 +39,33 @@ function heartbeat() {
   }, 30000);
 }
 
-function protectStatus() {
-  if (!client.user) return;
+async function protectStatus() {
+  try {
+    if (!client.user) return;
 
-  client.user.setPresence({
-    activities: [{ name: "HBRP", type: ActivityType.Playing }],
-    status: 'online',
-  }).catch(console.error);
+    await client.user.setPresence({
+      activities: [{ name: "HBRP", type: ActivityType.Playing }],
+      status: 'online',
+    });
+  } catch (error) {
+    console.error('\x1b[31m[ PROTECT STATUS ERROR ]\x1b[0m', error);
+  }
 }
 
 // ბოტის სტატუსის დაცვა სხვადასხვა მეთოდებით
-client.on('presenceUpdate', (oldPresence, newPresence) => {
+client.on('presenceUpdate', async (oldPresence, newPresence) => {
   if (newPresence.user.id === client.user.id) {
-    updateStatus();
+    await updateStatus();
   }
 });
 
-client.once('ready', () => {
+client.once('ready', async () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[32mLogged in as: ${client.user.tag} ✅\x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
 
   // სტატუსის დაყენება პირველად
-  updateStatus();
+  await updateStatus();
   
   // სტატუსის პერიოდული დაცვა
   setInterval(protectStatus, 2000);
