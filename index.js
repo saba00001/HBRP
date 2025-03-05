@@ -69,15 +69,9 @@ function heartbeat() {
   }, 30000);
 }
 
-// Block direct messages to the bot
 client.on('messageCreate', async (message) => {
-  // Completely ignore and delete all direct messages
   if (message.channel.type === 'DM') {
-    try {
-      await message.delete();
-    } catch (error) {
-      console.log('Could not delete DM');
-    }
+    await message.reply("DM შეტყობინებები გამორთულია.");
     return;
   }
 
