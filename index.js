@@ -21,54 +21,6 @@ app.listen(port, () => {
     console.log('\x1b[36m[ SERVER ]\x1b[0m', '\x1b[32m SH : http://localhost:' + port + ' ✅\x1b[0m');
 });
 
-// Configuration for playing panel
-const PLAYING_PANELS = [
-    { name: "HBRP", details: "High Base RP Server" },
-    { name: "Valorant", details: "Competitive Gameplay" },
-    { name: "GTA V", details: "Role Play Server" }
-];
-
-client.on('messageCreate', (message) => {
-    // Check if message starts with !playing
-    if (!message.content.startsWith('!playing')) return;
-    
-    // Ignore messages from bots
-    if (message.author.bot) return;
-    
-    // Split the message into parts
-    const args = message.content.split(' ');
-    
-    // Check if the command has enough arguments
-    if (args.length < 2) {
-        return message.reply('Usage: !playing <game name>\nAvailable games: ' + 
-            PLAYING_PANELS.map(panel => panel.name).join(', '));
-    }
-    
-    // Get the game name (everything after !playing)
-    const gameName = args.slice(1).join(' ');
-    
-    // Find the matching panel
-    const selectedPanel = PLAYING_PANELS.find(panel => 
-        panel.name.toLowerCase() === gameName.toLowerCase()
-    );
-    
-    // If no matching panel found
-    if (!selectedPanel) {
-        return message.reply('Game not found. Available games: ' + 
-            PLAYING_PANELS.map(panel => panel.name).join(', '));
-    }
-    
-    // Update the playing panel
-    client.user.setActivity({
-        name: selectedPanel.name,
-        type: ActivityType.Playing,
-        details: selectedPanel.details
-    });
-    
-    // Confirm the status change
-    message.reply(`Now playing: ${selectedPanel.name} (${selectedPanel.details})`);
-});
-
 async function login() {
     try {
         await client.login(process.env.TOKEN);
@@ -87,16 +39,38 @@ function heartbeat() {
     }, 30000);
 }
 
+client.on('messageCreate', async (message) => {
+    // Check if the message starts with the activity command
+    if (message.content.startsWith('!activity')) {
+        // Check if the user has permissions to change the activity
+        if (!message.member.permissions.has('ADMINISTRATOR')) {
+            return message.reply('You do not have permission to change the bot\'s activity.');
+        }
+
+        // Extract the activity text
+        const activityText = message.content.slice('!activity'.length).trim();
+        
+        if (!activityText) {
+            return message.reply('Please provide an activity text. Usage: !activity <text>');
+        }
+
+        try {
+            // Set the bot's activity
+            client.user.setActivity({
+                name: activityText,
+                type: ActivityType.Playing
+            });
+
+            message.reply(`Bot activity set to: Playing ${activityText}`);
+        } catch (error) {
+            console.error('Error setting activity:', error);
+            message.reply('Failed to set activity.');
+        }
+    }
+});
+
 client.once('ready', () => {
     console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
-    
-    // Set initial playing panel
-    client.user.setActivity({
-        name: "HBRP",
-        type: ActivityType.Playing,
-        details: "High Base RP Server"
-    });
-    
     heartbeat();
 });
 
