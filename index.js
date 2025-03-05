@@ -5,7 +5,9 @@ const path = require('path');
 
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
     ],
 });
 
@@ -19,12 +21,21 @@ app.listen(port, () => {
     console.log('\x1b[36m[ SERVER ]\x1b[0m', '\x1b[32m SH : http://localhost:' + port + ' ✅\x1b[0m');
 });
 
-const statusMessages = [
-    "HB:RP"
-];
-const statusTypes = ['dnd', 'idle', 'online'];
-let currentStatusIndex = 0;
-let currentTypeIndex = 0;
+// Default initial status
+const DEFAULT_STATUS = {
+    name: "VALORANT",
+    type: ActivityType.Playing
+};
+
+// Replace with YOUR Discord User ID 
+const OWNER_ID = process.env.1326983284168720505;
+
+const STATUS_TYPES = {
+    play: ActivityType.Playing,
+    listen: ActivityType.Listening,
+    watch: ActivityType.Watching,
+    compete: ActivityType.Competing
+};
 
 async function login() {
     try {
@@ -38,35 +49,68 @@ async function login() {
     }
 }
 
-function updateStatus() {
-    const currentGame = statusMessages[currentStatusIndex];
-    const currentType = statusTypes[currentTypeIndex];
+function setCustomStatus(game, type = 'play') {
+    const activityType = STATUS_TYPES[type] || ActivityType.Playing;
     
     client.user.setPresence({
         activities: [{ 
-            name: currentGame, 
-            type: ActivityType.Playing 
+            name: game, 
+            type: activityType 
         }],
-        status: currentType,
+        status: 'online',
     });
     
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated game status to: ${currentGame} (${currentType})`);
-    
-    currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
-    currentTypeIndex = (currentTypeIndex + 1) % statusTypes.length;
+    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${game} (${type})`);
+    return `Status updated to ${type} ${game}`;
 }
 
-function heartbeat() {
-    setInterval(() => {
-        console.log('\x1b[35m[ HEARTBEAT ]\x1b[0m', `Bot is alive at ${new Date().toLocaleTimeString()}`);
-    }, 30000);
-}
+// Event listener for status change command
+client.on('messageCreate', message => {
+    // Check if the message starts with !status
+    if (!message.content.startsWith('!status')) return;
+    
+    // Prevent usage in DMs
+    if (!message.guild) return;
+    
+    // Check if the message author is the bot owner
+    if (message.author.id !== OWNER_ID) {
+        return message.reply('ამ კომანდის გამოყენების უფლება გაქვს მხოლოდ ბოტის მფლობელს.');
+    }
+    
+    // Parse the command
+    const args = message.content.slice('!status'.length).trim().split(/ +/);
+    
+    // If no arguments, show current status
+    if (args.length === 0) {
+        const currentActivity = client.user.presence.activities[0];
+        return message.reply(`Current status: ${currentActivity ? `${currentActivity.type} ${currentActivity.name}` : 'No status set'}`);
+    }
+    
+    // Determine type (optional)
+    let type = 'play';
+    let statusText = args.join(' ');
+    
+    // Check if first argument is a valid status type
+    if (Object.keys(STATUS_TYPES).includes(args[0])) {
+        type = args[0];
+        statusText = args.slice(1).join(' ');
+    }
+    
+    // Validate status text
+    if (!statusText) {
+        return message.reply('გთხოვთ შეიყვანოთ სტატუსის ტექსტი.');
+    }
+    
+    // Set the status
+    const response = setCustomStatus(statusText, type);
+    message.reply(response);
+});
 
 client.once('ready', () => {
     console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
-    updateStatus();
-    setInterval(updateStatus, 10000);
-    heartbeat();
+    
+    // Set initial default status
+    setCustomStatus(DEFAULT_STATUS.name, Object.keys(STATUS_TYPES).find(key => STATUS_TYPES[key] === DEFAULT_STATUS.type));
 });
 
 login();
