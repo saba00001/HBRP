@@ -4,16 +4,7 @@ const express = require('express');
 const path = require('path');
 
 const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds, 
-    GatewayIntentBits.GuildPresences
-  ],
-  ws: {
-    properties: {
-      // გამორთეთ სტანდარტული სტატუს სინქრონიზაცია
-      status: 'invisible'
-    }
-  }
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildPresences],
 });
 
 const app = express();
@@ -27,42 +18,17 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32mSH : http://localhost:${port} ✅\x1b[0m`);
 });
 
-async function setFinalStatus() {
-  try {
-    if (!client.user) return;
+function updateStatus() {
+  if (!client.user) return; 
 
-    console.log('\x1b[33m[ STATUS DEBUG ]\x1b[0m', 'Attempting to set final status');
+  // Forcefully set the status to override any existing statuses
+  client.user.setPresence({
+    activities: [{ name: "HBRP", type: ActivityType.Playing }],
+    status: 'online',
+    afk: false
+  });
 
-    // სტატუსის დაყენება რამდენიმე მეთოდით
-    await client.user.setPresence({
-      activities: [{ 
-        name: "HBRP", 
-        type: ActivityType.Competing 
-      }],
-      status: 'online'
-    });
-
-    // დამატებითი დაცვა
-    await client.user.setActivity("HBRP", { type: ActivityType.Competing });
-    
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Locked status to: Competing in HBRP`);
-  } catch (error) {
-    console.error('\x1b[31m[ STATUS ERROR ]\x1b[0m', error);
-  }
-}
-
-function createPersistentStatusProtection() {
-  // ინტერვალი სტატუსის პერმანენტული დაცვისთვის
-  const statusProtector = setInterval(async () => {
-    try {
-      await setFinalStatus();
-    } catch (error) {
-      console.error('\x1b[31m[ STATUS PROTECT ERROR ]\x1b[0m', error);
-    }
-  }, 5000); // ყოველ 5 წამში
-
-  // იმ შემთხვევაში თუ დაიხურება ინტერვალი
-  return () => clearInterval(statusProtector);
+  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
 }
 
 function heartbeat() {
@@ -71,30 +37,30 @@ function heartbeat() {
   }, 30000);
 }
 
-client.once('ready', async () => {
+function setStatusInterval() {
+  // More aggressive status update interval
+  setInterval(() => {
+    updateStatus();
+  }, 2000); // Every 2 seconds to ensure status remains consistent
+}
+
+client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[32mLogged in as: ${client.user.tag} ✅\x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[35mBot ID: ${client.user.id} \x1b[0m`);
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
 
-  // დაყოვნება სრული ჩატვირთვის შემდეგ
-  await new Promise(resolve => setTimeout(resolve, 2000));
-
-  // სტატუსის საბოლოო დაყენება
-  await setFinalStatus();
-
-  // სტატუსის დამცავი მექანიზმი
-  const stopStatusProtector = createPersistentStatusProtection();
-
-  // heartbeat გაშვება
+  // Immediately set and then continuously maintain the status
+  updateStatus();
+  setStatusInterval();
   heartbeat();
+});
 
-  // სტატუსის ცვლილების აღკვეთა
-  client.on('presenceUpdate', async (oldPresence, newPresence) => {
-    if (newPresence.user.id === client.user.id) {
-      console.log('\x1b[33m[ STATUS DEBUG ]\x1b[0m', 'Presence update detected, blocking...');
-      await setFinalStatus();
-    }
-  });
+// Add event listener to handle potential status changes by other bots
+client.on('presenceUpdate', (oldPresence, newPresence) => {
+  // Check if the presence update is for a bot
+  if (newPresence.user.bot) {
+    updateStatus(); // Immediately reset status if another bot tries to change it
+  }
 });
 
 async function login() {
