@@ -21,7 +21,7 @@ app.listen(port, () => {
 function updateStatus() {
   client.user.setPresence({
     activities: [{ name: "HBRP", type: ActivityType.Playing }],
-    status: 'online', // ან შეგიძლია შეცვალო 'dnd', 'idle'
+    status: 'online', // შეგიძლია შეცვალო 'dnd', 'idle'
   });
 
   console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
@@ -39,6 +39,7 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
   
   updateStatus();
+  setInterval(updateStatus, 30000); // 30 წამში ერთხელ განახლდება სტატუსი
   heartbeat();
 });
 
