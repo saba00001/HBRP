@@ -18,19 +18,13 @@ app.listen(port, () => {
   console.log('\x1b[36m[ SERVER ]\x1b[0m', `\x1b[32mSH : http://localhost:${port} ✅\x1b[0m`);
 });
 
-const statusMessages = ["🎧 Listening to Spotify", "🎮 Playing VALORANT", "🛠️ Developing Vanguard"];
-const statusTypes = ['dnd', 'idle', 'online'];
-let currentIndex = 0;
-
 function updateStatus() {
   client.user.setPresence({
-    activities: [{ name: statusMessages[currentIndex], type: ActivityType.Playing }],
-    status: statusTypes[currentIndex],
+    activities: [{ name: "HBRP", type: ActivityType.Playing }],
+    status: 'online', // ან შეგიძლია შეცვალო 'dnd', 'idle'
   });
 
-  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${statusMessages[currentIndex]} (${statusTypes[currentIndex]})`);
-
-  currentIndex = (currentIndex + 1) % statusMessages.length; // ცვლის სტატუსს ციკლურად
+  console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: Playing HBRP`);
 }
 
 function heartbeat() {
@@ -45,7 +39,6 @@ client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mConnected to ${client.guilds.cache.size} server(s) \x1b[0m`);
   
   updateStatus();
-  setInterval(updateStatus, 30000); // სტატუსის განახლება ყოველ 30 წამში
   heartbeat();
 });
 
