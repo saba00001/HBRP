@@ -20,10 +20,7 @@ app.listen(port, () => {
 });
 
 const statusMessages = [
-    "VALORANT",
-    "Minecraft",
-    "League of Legends",
-    "Apex Legends"
+    "HB:RP"
 ];
 const statusTypes = ['dnd', 'idle', 'online'];
 let currentStatusIndex = 0;
