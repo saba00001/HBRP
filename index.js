@@ -20,9 +20,10 @@ app.listen(port, () => {
 });
 
 const statusMessages = [
-    { name: "🎧 Listening to Spotify", type: ActivityType.Listening },
-    { name: "🎮 Playing VALORANT", type: ActivityType.Playing },
-    { name: "🎲 Playing Games", type: ActivityType.Playing }
+    "VALORANT",
+    "Minecraft",
+    "League of Legends",
+    "Apex Legends"
 ];
 const statusTypes = ['dnd', 'idle', 'online'];
 let currentStatusIndex = 0;
@@ -41,18 +42,18 @@ async function login() {
 }
 
 function updateStatus() {
-    const currentStatus = statusMessages[currentStatusIndex];
+    const currentGame = statusMessages[currentStatusIndex];
     const currentType = statusTypes[currentTypeIndex];
     
     client.user.setPresence({
         activities: [{ 
-            name: currentStatus.name, 
-            type: currentStatus.type 
+            name: currentGame, 
+            type: ActivityType.Playing 
         }],
         status: currentType,
     });
     
-    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated status to: ${currentStatus.name} (${currentType})`);
+    console.log('\x1b[33m[ STATUS ]\x1b[0m', `Updated game status to: ${currentGame} (${currentType})`);
     
     currentStatusIndex = (currentStatusIndex + 1) % statusMessages.length;
     currentTypeIndex = (currentTypeIndex + 1) % statusTypes.length;
