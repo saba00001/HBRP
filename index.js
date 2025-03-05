@@ -33,6 +33,9 @@ let currentTypeIndex = 0;
 // Store the last sent command message to prevent duplicate sending
 let lastCommandMessage = null;
 
+// Conversations will be stored here with more detailed information
+const conversationMap = new Map();
+
 async function safeDelete(message) {
   try {
     if (message && message.deletable) {
@@ -73,9 +76,6 @@ function heartbeat() {
   }, 30000);
 }
 
-// Create a map to store ongoing conversations
-const conversationMap = new Map();
-
 client.on('messageCreate', async (message) => {
   // Ignore messages from bots
   if (message.author.bot) return;
@@ -85,23 +85,94 @@ client.on('messageCreate', async (message) => {
 
   // Handle direct messages to the bot
   if (message.channel.type === 'DM') {
-    // Add the conversation to the map if not already present
+    // Ensure the conversation exists in the map
     if (!conversationMap.has(message.author.id)) {
-      conversationMap.set(message.author.id, []);
+      conversationMap.set(message.author.id, {
+        userTag: message.author.tag,
+        messages: []
+      });
     }
 
-    // Store the message in the conversation
-    const conversationHistory = conversationMap.get(message.author.id);
-    conversationHistory.push({
-      author: message.author.username,
-      content: message.content
+    // Get the conversation for this user
+    const userConversation = conversationMap.get(message.author.id);
+
+    // Add the new message to the conversation
+    userConversation.messages.push({
+      timestamp: new Date(),
+      content: message.content,
+      author: 'User'
     });
 
     // Notify the owner about the new message
     const ownerUser = await client.users.fetch(OWNER_ID);
-    const formattedMessage = `📩 **New DM from ${message.author.tag}**\n\`\`\`\n${message.content}\n\`\`\`\nReply using: !reply ${message.author.id} [your message]`;
+    
+    // Prepare a formatted conversation history
+    const conversationHistory = userConversation.messages
+      .map(msg => `${msg.timestamp.toLocaleString()} - ${msg.author}: ${msg.content}`)
+      .join('\n');
+
+    const formattedMessage = `📩 **New DM from ${message.author.tag}**\n\`\`\`\nCONVERSATION HISTORY:\n${conversationHistory}\n\n--- NEW MESSAGE ---\n${message.content}\n\`\`\`\nReply using: !reply ${message.author.id} [your message]`;
+    
     await ownerUser.send(formattedMessage);
 
+    return;
+  }
+
+  // !conversations command to view all ongoing conversations
+  if (message.content === '!conversations') {
+    // Check owner permissions
+    if (!isOwner) {
+      const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
+      setTimeout(() => safeDelete(deniedMsg), 3000);
+      return;
+    }
+
+    // Prepare conversation list
+    let conversationList = 'ONGOING CONVERSATIONS:\n';
+    if (conversationMap.size === 0) {
+      conversationList += 'No active conversations.';
+    } else {
+      for (const [userId, conversation] of conversationMap.entries()) {
+        const lastMessage = conversation.messages[conversation.messages.length - 1];
+        conversationList += `\n👤 ${conversation.userTag} (ID: ${userId})\n`;
+        conversationList += `   Last Message: ${lastMessage.content}\n`;
+        conversationList += `   At: ${lastMessage.timestamp.toLocaleString()}\n`;
+      }
+    }
+
+    // Send the conversation list
+    await message.channel.send(`\`\`\`\n${conversationList}\n\`\`\``);
+    return;
+  }
+
+  // !viewconvo command to view a specific conversation
+  if (message.content.startsWith('!viewconvo ')) {
+    // Check owner permissions
+    if (!isOwner) {
+      const deniedMsg = await message.reply('❌ Only the bot owner can use this command.');
+      setTimeout(() => safeDelete(deniedMsg), 3000);
+      return;
+    }
+
+    const userId = message.content.slice(11).trim();
+    
+    // Check if conversation exists
+    if (!conversationMap.has(userId)) {
+      const notFoundMsg = await message.reply(`❌ No conversation found with user ID ${userId}`);
+      setTimeout(() => safeDelete(notFoundMsg), 3000);
+      return;
+    }
+
+    // Get the conversation
+    const userConversation = conversationMap.get(userId);
+    
+    // Prepare detailed conversation history
+    const conversationHistory = userConversation.messages
+      .map(msg => `${msg.timestamp.toLocaleString()} - ${msg.author}: ${msg.content}`)
+      .join('\n');
+
+    // Send the conversation history
+    await message.channel.send(`📬 Conversation with ${userConversation.userTag} (ID: ${userId}):\n\`\`\`\n${conversationHistory}\n\`\`\``);
     return;
   }
 
@@ -133,6 +204,24 @@ client.on('messageCreate', async (message) => {
         setTimeout(() => safeDelete(notFoundMsg), 3000);
         return;
       }
+
+      // Ensure the conversation exists in the map
+      if (!conversationMap.has(userId)) {
+        conversationMap.set(userId, {
+          userTag: user.tag,
+          messages: []
+        });
+      }
+
+      // Get the conversation for this user
+      const userConversation = conversationMap.get(userId);
+
+      // Add the reply to the conversation
+      userConversation.messages.push({
+        timestamp: new Date(),
+        content: replyText,
+        author: 'Bot Owner'
+      });
 
       // Send direct message
       await user.send(replyText);
