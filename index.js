@@ -69,7 +69,18 @@ function heartbeat() {
   }, 30000);
 }
 
+// Block direct messages to the bot
 client.on('messageCreate', async (message) => {
+  // Completely ignore and delete all direct messages
+  if (message.channel.type === 'DM') {
+    try {
+      await message.delete();
+    } catch (error) {
+      console.log('Could not delete DM');
+    }
+    return;
+  }
+
   // Ignore messages from bots
   if (message.author.bot) return;
 
@@ -159,9 +170,6 @@ client.on('messageCreate', async (message) => {
 
 client.once('ready', () => {
   console.log('\x1b[36m[ INFO ]\x1b[0m', `\x1b[34mPing: ${client.ws.ping} ms \x1b[0m`);
-  
-  // Disable message button on bot profile
-  client.user.setFlags({ ALLOW_DM: false });
   
   updateStatus();
   setInterval(updateStatus, 10000);
