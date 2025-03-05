@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, ChannelType } = require('discord.js');
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
@@ -24,7 +24,7 @@ app.listen(port, () => {
 // Owner's Discord user ID (replace with your actual Discord user ID)
 const OWNER_ID = '1326983284168720505';
 
-const statusMessages = ["🤖 Hi, I am Horizon Beyond Role Play Official Bot"];
+const statusMessages = ["🤖 DM-ები გამორთულია"];
 const statusTypes = ['dnd', 'idle'];
 let currentStatusIndex = 0;
 let currentTypeIndex = 0;
@@ -69,9 +69,15 @@ function heartbeat() {
   }, 30000);
 }
 
+// Completely block direct messages
 client.on('messageCreate', async (message) => {
-  if (message.channel.type === 'DM') {
-    await message.reply("DM შეტყობინებები გამორთულია.");
+  // Block all direct messages
+  if (message.channel.type === ChannelType.DM) {
+    try {
+      await message.reply("⛔ DM შეტყობინებები გამორთულია. / DM messages are disabled.");
+    } catch (error) {
+      console.log('Could not send DM response');
+    }
     return;
   }
 
@@ -159,6 +165,20 @@ client.on('messageCreate', async (message) => {
       setTimeout(() => safeDelete(failedMsg), 3000);
     }
     return;
+  }
+});
+
+// Block interaction with bot
+client.on('interactionCreate', async (interaction) => {
+  if (interaction.isMessageComponent() || interaction.type === 'MESSAGE_COMPONENT') {
+    try {
+      await interaction.reply({ 
+        content: "⛔ ურთიერთქმედება გამორთულია / Interactions are disabled", 
+        ephemeral: true 
+      });
+    } catch (error) {
+      console.error('Error handling interaction:', error);
+    }
   }
 });
 
