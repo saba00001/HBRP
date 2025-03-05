@@ -47,3 +47,9 @@ async function login() {
 }
 
 login();
+
+process.on('uncaughtException', function (err) {
+  console.error('[ CRASH ]', err);
+  console.log('Bot restarting...');
+  login();
+});
